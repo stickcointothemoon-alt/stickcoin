@@ -233,14 +233,17 @@ canvas{display:block;image-rendering:pixelated;max-width:100%;max-height:100%;}
     <!-- STEP 3: DM -->
     <div class="cstep" id="cstep3">
       <div class="c-title">STEP 3: SEND DM</div>
-      <div class="c-sub">DM this code to <strong style="color:var(--gold)">@Stickcoin1</strong> on X. Include your wallet in the DM.</div>
-      <div class="c-lbl">YOUR CLAIM CODE</div>
+      <div class="c-sub">Your claim code is <strong style="color:var(--gold)">private</strong> — send it only via DM to <strong style="color:var(--gold)">@Stickcoin1</strong>. Never share it publicly!</div>
+      <div class="c-lbl">YOUR SECRET CLAIM CODE 🔒</div>
       <div class="c-code" id="claim-code-display">SCOIN-XXXXXX</div>
-      <div class="c-sub" style="margin-top:8px;">
-        DM format:<br>
-        <span style="color:var(--gold);">CLAIM [CODE] [WALLET] [SCREENSHOT]</span>
+      <div style="background:rgba(255,51,51,.08);border:1px solid #ff3333;padding:8px 10px;font-size:9px;color:#ff6666;margin:8px 0;letter-spacing:.5px;">
+        ⚠ KEEP THIS CODE PRIVATE. Do not post it publicly. DM only.
       </div>
-      <button class="c-btn twitter" id="btn-dm-x">📨 OPEN X TO DM</button>
+      <div class="c-sub" style="margin-top:8px;">
+        DM format to @Stickcoin1:<br>
+        <span style="color:var(--gold);">CLAIM [CODE] [WALLET] + screenshot</span>
+      </div>
+      <button class="c-btn twitter" id="btn-dm-x">📨 OPEN DM TO @STICKCOIN1</button>
       <div class="c-note">After we verify your tweet + score, tokens are sent within 24h. One claim per wallet per session.</div>
     </div>
 
@@ -268,8 +271,8 @@ canvas{display:block;image-rendering:pixelated;max-width:100%;max-height:100%;}
 //    INSERT INTO pool VALUES (1, 10000000);
 // 3. Fill in your URL and anon key below:
 // ══════════════════════════════════════════
-const SB_URL = 'https://eidlnlpxeajujcvprpmv.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpZGxubHB4ZWFqdWpjdnBycG12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMzQ4MTgsImV4cCI6MjA5NDYxMDgxOH0.2OghFnjYQv7nXRIAlBSa2TLvszFmLENqz5t6LW24MqY';
+const SB_URL = 'YOUR_SUPABASE_URL';
+const SB_KEY = 'YOUR_SUPABASE_ANON_KEY';
 let poolRemaining = 10000000;
 
 async function fetchPool() {
@@ -1148,8 +1151,8 @@ function closeClaim() {
 // Tweet step
 document.getElementById('btn-tweet-score').addEventListener('click', () => {
   const msg = encodeURIComponent(
-    `I just collected ${totalCoins.toLocaleString()} $SCOIN in Sticky Jump!\n\n` +
-    `Claim code: ${claimCode}\n` +
+    `I just collected ${totalCoins.toLocaleString()} $SCOIN in Sticky Jump! 🏆\n\n` +
+    `Still here. WAGMI. 🪙\n\n` +
     `Play & earn real tokens: https://stickcoin.xyz\n` +
     `@Stickcoin1 #Solana #SCOIN #WAGMI`
   );
