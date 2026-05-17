@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>$SCOIN – Sticky Jump</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Share+Tech+Mono&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<!-- NETLIFY FORM -->
+<form name="sticky-jump-claim" netlify netlify-honeypot="bot-field" hidden>
+  <input name="bot-field"><input name="x_username" type="text">
+  <input name="wallet" type="text"><input name="coins" type="text">
+  <input name="level_reached" type="text"><input name="claim_code" type="text">
+  <input name="timestamp" type="text">
+</form>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--gold:#C9A227;--gold2:#F0C93A;--green:#39ff14;--red:#ff3333;--black:#050705;--panel:#0d0d0d;--cream:#F0E6CC;}
+html,body{height:100%;background:#000;overflow:hidden;font-family:'Share Tech Mono',monospace;color:#fff;touch-action:none;}
+
+/* CANVAS WRAPPER */
+#game-wrap{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+canvas{display:block;image-rendering:pixelated;max-width:100%;max-height:100%;}
+
+/* HUD */
+#hud{position:absolute;top:0;left:0;right:0;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.7);border-bottom:2px solid var(--gold);pointer-events:none;z-index:10;}
+.hud-item{display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:clamp(9px,2vw,13px);}
+.hud-val{font-family:'Bangers',cursive;font-size:clamp(14px,3vw,22px);color:var(--gold);letter-spacing:1px;}
+.hud-lbl{font-size:clamp(7px,1.5vw,10px);color:#555;letter-spacing:1px;}
+.lives-hearts{letter-spacing:2px;font-size:clamp(12px,2.5vw,18px);}
+#pool-bar-wrap{position:absolute;bottom:0;left:0;right:0;height:4px;background:#111;}
+#pool-bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--green));transition:width .5s;}
+
+/* MOBILE CONTROLS */
+#controls{position:absolute;bottom:0;left:0;right:0;height:110px;display:none;pointer-events:none;z-index:20;}
+.ctrl-left{position:absolute;bottom:14px;left:14px;display:flex;gap:10px;}
+.ctrl-right{position:absolute;bottom:14px;right:14px;}
+.ctrl-btn{width:60px;height:60px;border-radius:50%;background:rgba(201,162,39,.15);border:2px solid rgba(201,162,39,.4);display:flex;align-items:center;justify-content:center;font-size:24px;pointer-events:all;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:background .1s;}
+.ctrl-btn:active,.ctrl-btn.pressed{background:rgba(201,162,39,.4);}
+.ctrl-btn.jump{width:70px;height:70px;background:rgba(57,255,20,.15);border-color:rgba(57,255,20,.4);font-size:28px;}
+.ctrl-btn.jump:active,.ctrl-btn.jump.pressed{background:rgba(57,255,20,.4);}
+
+/* POWERUP INDICATOR */
+#pu-indicator{position:absolute;top:60px;right:14px;background:rgba(0,0,0,.8);border:1px solid var(--gold);padding:6px 10px;font-size:10px;display:none;z-index:10;pointer-events:none;}
+#pu-name{color:var(--gold);font-family:'Bangers',cursive;font-size:14px;letter-spacing:1px;}
+#pu-timer{color:#555;font-size:9px;}
+
+/* SCREENS */
+.screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.88);z-index:30;flex-direction:column;text-align:center;padding:20px;}
+.screen.active{display:flex;}
+.screen-title{font-family:'Bangers',cursive;font-size:clamp(32px,7vw,64px);letter-spacing:5px;color:var(--gold);text-shadow:0 0 20px rgba(201,162,39,.5);margin-bottom:8px;line-height:1;}
+.screen-sub{font-size:clamp(9px,2vw,13px);color:#555;letter-spacing:2px;margin-bottom:24px;}
+.screen-btn{background:var(--gold);color:#000;border:none;padding:14px 36px;font-family:'Bangers',cursive;font-size:clamp(18px,4vw,26px);letter-spacing:3px;cursor:pointer;margin:6px;transition:all .15s;box-shadow:4px 4px 0 #000;}
+.screen-btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #000;}
+.screen-btn.dark{background:#111;color:var(--gold);border:2px solid var(--gold);}
+.screen-btn.red{background:var(--red);}
+.pool-display{font-family:'Bangers',cursive;font-size:clamp(18px,4vw,32px);color:var(--gold);letter-spacing:2px;margin:10px 0;}
+.pool-display small{font-size:10px;color:#555;display:block;letter-spacing:3px;}
+.level-badge{background:var(--gold);color:#000;font-family:'Bangers',cursive;font-size:clamp(12px,3vw,20px);letter-spacing:2px;padding:4px 16px;margin-bottom:16px;display:inline-block;}
+.tips{font-size:clamp(8px,1.8vw,11px);color:#333;line-height:2;letter-spacing:.5px;}
+.tips span{color:var(--gold);}
+
+/* GAMEOVER */
+#go-coins{font-family:'Bangers',cursive;font-size:clamp(40px,8vw,72px);color:var(--gold);line-height:1;}
+#go-level{font-size:11px;color:#555;letter-spacing:2px;margin-bottom:20px;}
+
+/* CLAIM MODAL */
+#claim-modal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.95);z-index:50;padding:16px;}
+#claim-modal.open{display:flex;}
+.cmodal{background:var(--panel);border:2px solid var(--gold);padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;}
+.cstep{display:none;}
+.cstep.active{display:block;}
+.c-title{font-family:'Bangers',cursive;font-size:24px;color:var(--gold);letter-spacing:3px;margin-bottom:4px;}
+.c-sub{font-size:10px;color:#444;margin-bottom:14px;letter-spacing:1px;line-height:1.7;}
+.c-coins-box{background:#080808;border:1px solid var(--gold);padding:14px;text-align:center;margin-bottom:14px;}
+.c-coins-lbl{font-size:9px;color:#444;letter-spacing:2px;}
+.c-coins-val{font-family:'Bangers',cursive;font-size:36px;color:var(--gold);letter-spacing:2px;text-shadow:0 0 12px rgba(201,162,39,.3);}
+.c-btn{width:100%;padding:12px;font-family:'Bangers',cursive;font-size:18px;letter-spacing:2px;border:none;cursor:pointer;margin-top:8px;transition:background .15s;}
+.c-btn.gold{background:var(--gold);color:#000;}
+.c-btn.gold:hover{background:var(--gold2);}
+.c-btn.twitter{background:#1DA1F2;color:#fff;}
+.c-btn.twitter:hover{background:#1a91da;}
+.c-btn:disabled{background:#222;color:#444;cursor:not-allowed;}
+.c-input{width:100%;background:#080808;border:1px solid #2a2a2a;color:var(--gold);padding:10px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;margin-bottom:6px;letter-spacing:.5px;}
+.c-input:focus{border-color:var(--gold);}
+.c-input::placeholder{color:#252525;}
+.c-lbl{font-size:9px;color:#383838;margin-bottom:3px;letter-spacing:2px;}
+.c-err{font-size:10px;color:var(--red);margin-top:4px;display:none;}
+.c-note{font-size:9px;color:#222;margin-top:8px;line-height:1.9;}
+.c-code{background:#080808;border:1px solid var(--gold);padding:10px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--gold);text-align:center;margin:10px 0;letter-spacing:2px;}
+.c-step-num{display:flex;gap:8px;margin-bottom:16px;}
+.c-step-dot{width:24px;height:24px;border-radius:50%;background:#111;border:1px solid #333;display:flex;align-items:center;justify-content:center;font-size:10px;color:#444;}
+.c-step-dot.done{background:var(--gold);color:#000;border-color:var(--gold);}
+.c-step-dot.active{border-color:var(--gold);color:var(--gold);}
+.success-icon{font-size:52px;margin-bottom:12px;text-align:center;}
+.success-title{font-family:'Bangers',cursive;font-size:24px;color:var(--gold);letter-spacing:3px;text-align:center;margin-bottom:8px;}
+.success-text{font-size:11px;color:#555;line-height:1.9;text-align:center;}
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-item">
+      <div>
+        <div class="hud-lbl">COINS</div>
+        <div class="hud-val" id="h-coins">0</div>
+      </div>
+    </div>
+    <div class="hud-item">
+      <div>
+        <div class="hud-lbl">LEVEL</div>
+        <div class="hud-val" id="h-level">1</div>
+      </div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-lbl">LIVES</div>
+      <div class="lives-hearts" id="h-lives">❤️❤️❤️</div>
+    </div>
+    <div class="hud-item">
+      <div>
+        <div class="hud-lbl">POOL LEFT</div>
+        <div class="hud-val" id="h-pool">10.0M</div>
+      </div>
+    </div>
+    <div id="pool-bar-wrap"><div id="pool-bar" style="width:100%"></div></div>
+  </div>
+
+  <!-- POWERUP INDICATOR -->
+  <div id="pu-indicator">
+    <div id="pu-name">COFFEE</div>
+    <div id="pu-timer">5s</div>
+  </div>
+
+  <!-- MENU SCREEN -->
+  <div class="screen active" id="screen-menu">
+    <div class="screen-title">🪙 STICKY JUMP</div>
+    <div class="screen-sub">COLLECT $SCOIN · DEFEAT JEETS · CLAIM REAL TOKENS</div>
+    <div class="pool-display">
+      <small>GLOBAL POOL REMAINING</small>
+      <span id="menu-pool">10,000,000</span> $SCOIN
+    </div>
+    <button class="screen-btn" id="btn-play">▶ PLAY NOW</button>
+    <div class="tips" style="margin-top:16px;">
+      <span>←→</span> Move &nbsp; <span>↑ / Space</span> Jump (x2) &nbsp; <span>Collect 🪙</span> Earn $SCOIN<br>
+      <span>Stomp</span> enemies &nbsp; <span>Power-ups</span> help you survive
+    </div>
+  </div>
+
+  <!-- LEVEL START -->
+  <div class="screen" id="screen-level">
+    <div class="level-badge" id="ls-badge">LEVEL 1</div>
+    <div class="screen-title" id="ls-title">THE STREETS</div>
+    <div class="screen-sub" id="ls-sub">Collect coins, stomp Jeets</div>
+    <div class="tips" id="ls-tips"></div>
+    <button class="screen-btn" id="btn-levelgo" style="margin-top:20px;">GO! →</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="screen" id="screen-gameover">
+    <div class="screen-title" style="color:var(--red);">REKT.</div>
+    <div id="go-level">LEVEL <span id="go-lvl">1</span> · STILL HERE THO</div>
+    <div id="go-coins" id="go-coins-val">0</div>
+    <div class="screen-sub">$SCOIN COLLECTED</div>
+    <button class="screen-btn" id="btn-claim-go">💰 CLAIM TOKENS</button>
+    <button class="screen-btn dark" id="btn-retry">↺ TRY AGAIN</button>
+  </div>
+
+  <!-- WIN -->
+  <div class="screen" id="screen-win">
+    <div class="screen-title">WAGMI! 🏆</div>
+    <div class="screen-sub">YOU BEAT THE VAULT BOSS</div>
+    <div id="go-coins" style="font-family:'Bangers',cursive;font-size:clamp(40px,8vw,72px);color:var(--gold);line-height:1;" id="win-coins-val">0</div>
+    <div class="screen-sub">$SCOIN COLLECTED — LEGENDARY RUN</div>
+    <button class="screen-btn" id="btn-claim-win">💰 CLAIM YOUR TOKENS</button>
+    <button class="screen-btn dark" id="btn-play-again">▶ PLAY AGAIN</button>
+  </div>
+
+  <!-- MOBILE CONTROLS -->
+  <div id="controls">
+    <div class="ctrl-left">
+      <div class="ctrl-btn" id="ctrl-left">◀</div>
+      <div class="ctrl-btn" id="ctrl-right">▶</div>
+    </div>
+    <div class="ctrl-right">
+      <div class="ctrl-btn jump" id="ctrl-jump">▲</div>
+    </div>
+  </div>
+</div>
+
+<!-- CLAIM MODAL -->
+<div id="claim-modal">
+  <div class="cmodal">
+
+    <!-- STEP INDICATORS -->
+    <div class="c-step-num">
+      <div class="c-step-dot active" id="dot1">1</div>
+      <div style="flex:1;height:1px;background:#1a1a1a;margin-top:12px;"></div>
+      <div class="c-step-dot" id="dot2">2</div>
+      <div style="flex:1;height:1px;background:#1a1a1a;margin-top:12px;"></div>
+      <div class="c-step-dot" id="dot3">3</div>
+    </div>
+
+    <!-- STEP 1: TWEET -->
+    <div class="cstep active" id="cstep1">
+      <div class="c-title">STEP 1: FLEX ON X</div>
+      <div class="c-sub">Share your score to prove you played. Required to claim.</div>
+      <div class="c-coins-box">
+        <div class="c-coins-lbl">YOU COLLECTED</div>
+        <div class="c-coins-val" id="claim-coins-display">0</div>
+        <div class="c-coins-lbl">$SCOIN</div>
+      </div>
+      <button class="c-btn twitter" id="btn-tweet-score">🐦 SHARE SCORE ON X</button>
+      <button class="c-btn gold" id="btn-after-tweet" style="margin-top:4px;" disabled>I TWEETED → NEXT STEP</button>
+      <div class="c-note">⚠ You must tweet first. Button activates after 5 seconds.</div>
+    </div>
+
+    <!-- STEP 2: WALLET -->
+    <div class="cstep" id="cstep2">
+      <div class="c-title">STEP 2: YOUR DETAILS</div>
+      <div class="c-sub">Enter your X username and Solana wallet address.</div>
+      <div class="c-lbl">YOUR X / TWITTER USERNAME</div>
+      <input class="c-input" id="c-xname" placeholder="@yourusername" maxlength="50" autocomplete="off">
+      <div class="c-lbl">SOLANA WALLET ADDRESS</div>
+      <input class="c-input" id="c-wallet" placeholder="Your Solana wallet..." maxlength="64" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="c-err" id="c-err">⚠ Fill in all fields with a valid wallet.</div>
+      <button class="c-btn gold" id="btn-submit-claim">SUBMIT →</button>
+    </div>
+
+    <!-- STEP 3: DM -->
+    <div class="cstep" id="cstep3">
+      <div class="c-title">STEP 3: SEND DM</div>
+      <div class="c-sub">DM this code to <strong style="color:var(--gold)">@Stickcoin1</strong> on X. Include your wallet in the DM.</div>
+      <div class="c-lbl">YOUR CLAIM CODE</div>
+      <div class="c-code" id="claim-code-display">SCOIN-XXXXXX</div>
+      <div class="c-sub" style="margin-top:8px;">
+        DM format:<br>
+        <span style="color:var(--gold);">CLAIM [CODE] [WALLET] [SCREENSHOT]</span>
+      </div>
+      <button class="c-btn twitter" id="btn-dm-x">📨 OPEN X TO DM</button>
+      <div class="c-note">After we verify your tweet + score, tokens are sent within 24h. One claim per wallet per session.</div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="cstep" id="cstep-success">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">CLAIM SUBMITTED!</div>
+      <div class="success-text">
+        Claim code recorded.<br>
+        DM @Stickcoin1 with your code + screenshot.<br>
+        Tokens sent within <strong style="color:var(--gold);">24 hours</strong> after verification.
+      </div>
+      <button class="c-btn gold" style="margin-top:16px;" onclick="closeClaim()">CLOSE & PLAY AGAIN</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// SUPABASE CONFIG
+// 1. Go to supabase.com → New Project
+// 2. SQL Editor → Run this:
+//    CREATE TABLE pool (id int primary key, remaining bigint);
+//    INSERT INTO pool VALUES (1, 10000000);
+// 3. Fill in your URL and anon key below:
+// ══════════════════════════════════════════
+const SB_URL = 'YOUR_SUPABASE_URL';
+const SB_KEY = 'YOUR_SUPABASE_ANON_KEY';
+let poolRemaining = 10000000;
+
+async function fetchPool() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/pool?id=eq.1&select=remaining`, {
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY}
+    });
+    const d = await r.json();
+    if (d[0]) { poolRemaining = d[0].remaining; updatePoolUI(); }
+  } catch(e) { /* offline fallback */ }
+}
+async function deductPool(amount) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/rpc/deduct_pool`, {
+      method: 'POST',
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'application/json'},
+      body: JSON.stringify({amount})
+    });
+    poolRemaining = Math.max(0, poolRemaining - amount);
+    updatePoolUI();
+  } catch(e) {}
+}
+function updatePoolUI() {
+  const fmt = n => n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : n.toLocaleString();
+  document.getElementById('h-pool').textContent = fmt(poolRemaining);
+  document.getElementById('menu-pool').textContent = poolRemaining.toLocaleString();
+  const pct = (poolRemaining / 10000000) * 100;
+  document.getElementById('pool-bar').style.width = pct + '%';
+}
+
+// ══ CANVAS ══
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W, H, SCALE;
+
+function resize() {
+  W = Math.min(window.innerWidth, 900);
+  H = window.innerHeight;
+  canvas.width = W; canvas.height = H;
+  SCALE = W / 800;
+}
+resize();
+window.addEventListener('resize', () => { resize(); });
+
+// ══ CONSTANTS ══
+const G = 0.45;
+const JUMP = -11;
+const SPEED = 3.8;
+const CAM_LERP = 0.1;
+
+// ══ INPUT ══
+const keys = {};
+const touch = {left: false, right: false, jump: false, jumpPressed: false};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if ((e.code === 'Space' || e.code === 'ArrowUp') && gameState === 'playing') {
+    e.preventDefault(); doJump();
+  }
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+// Mobile controls
+function setupTouch(id, prop) {
+  const el = document.getElementById(id);
+  el.addEventListener('touchstart', e => { e.preventDefault(); touch[prop] = true; el.classList.add('pressed'); }, {passive: false});
+  el.addEventListener('touchend', e => { e.preventDefault(); touch[prop] = false; el.classList.remove('pressed'); }, {passive: false});
+}
+setupTouch('ctrl-left', 'left');
+setupTouch('ctrl-right', 'right');
+const jumpEl = document.getElementById('ctrl-jump');
+jumpEl.addEventListener('touchstart', e => { e.preventDefault(); touch.jump = true; touch.jumpPressed = true; jumpEl.classList.add('pressed'); doJump(); }, {passive: false});
+jumpEl.addEventListener('touchend', e => { e.preventDefault(); touch.jump = false; jumpEl.classList.remove('pressed'); }, {passive: false});
+
+// ══ GAME STATE ══
+let gameState = 'menu'; // menu, levelstart, playing, gameover, win
+let currentLevel = 0;
+let totalCoins = 0;
+let sessionCoins = 0;
+let camX = 0;
+let frameCount = 0;
+
+// ══ PLAYER ══
+let p;
+function resetPlayer(sx, sy) {
+  p = { x: sx, y: sy, vx: 0, vy: 0, w: 22, h: 34,
+    onGround: false, jumpsLeft: 2, facing: 1,
+    lives: 3, shield: false, invTimer: 0,
+    powerup: null, puTimer: 0, dead: false };
+}
+
+function doJump() {
+  if (!p || gameState !== 'playing') return;
+  if (p.jumpsLeft > 0) {
+    p.vy = p.jumpsLeft === 2 ? JUMP : JUMP * 0.8;
+    p.jumpsLeft--;
+    p.onGround = false;
+  }
+}
+
+// ══ LEVEL DATA ══
+const LEVELS = [
+  // LEVEL 1 — THE STREETS
+  {
+    name: 'THE STREETS', sub: 'Collect $SCOIN · Stomp Jeets!',
+    tips: 'Jump on enemies to stomp them. Collect all coins. Reach the flag!',
+    bg1: '#0a0a1a', bg2: '#111128', starColor: '#C9A227',
+    width: 3200,
+    platforms: [
+      {x:0,   y:520, w:300, h:20},
+      {x:320, y:460, w:180, h:20},
+      {x:540, y:400, w:140, h:20},
+      {x:720, y:460, w:160, h:20},
+      {x:920, y:520, w:250, h:20},
+      {x:1200,y:460, w:200, h:20},
+      {x:1440,y:400, w:160, h:20},
+      {x:1640,y:340, w:140, h:20},
+      {x:1820,y:400, w:180, h:20},
+      {x:2040,y:460, w:220, h:20},
+      {x:2300,y:400, w:160, h:20},
+      {x:2500,y:460, w:200, h:20},
+      {x:2740,y:520, w:300, h:20},
+      {x:3050,y:460, w:200, h:20},
+    ],
+    floor: {x:0, y:560, w:3200, h:40},
+    coins: makeCoins([[150,490],[200,490],[380,420],[430,420],[580,360],[640,360],[760,420],[820,420],[980,490],[1030,490],[1080,490],[1250,420],[1300,420],[1480,360],[1670,300],[1720,300],[1870,360],[1920,360],[2090,420],[2140,420],[2350,360],[2540,420],[2780,490],[2830,490],[2880,490],[3090,420],[3130,420]]),
+    enemies: [
+      {x:400,y:530,type:'jeet',dir:1,speed:1.2},
+      {x:760,y:530,type:'jeet',dir:-1,speed:1.4},
+      {x:1260,y:430,type:'jeet',dir:1,speed:1.3},
+      {x:1680,y:310,type:'jeet',dir:-1,speed:1.5},
+      {x:2100,y:430,type:'jeet',dir:1,speed:1.4},
+      {x:2560,y:430,type:'jeet',dir:-1,speed:1.6},
+    ],
+    powerups: [
+      {x:640,y:340,type:'coffee'},
+      {x:1720,y:280,type:'shield'},
+      {x:2880,y:450,type:'magnet'},
+    ],
+    goal: {x:3100, y:400},
+    startX: 60, startY: 490,
+  },
+  // LEVEL 2 — THE MEMPOOL
+  {
+    name: 'THE MEMPOOL', sub: 'Faster Jeets · Bigger Drops!',
+    tips: 'Paper Hand enemies (blue) are faster and steal MORE coins!',
+    bg1: '#0a1a0a', bg2: '#0f1f0f', starColor: '#39ff14',
+    width: 4000,
+    platforms: [
+      {x:0,   y:520, w:250, h:20},
+      {x:300, y:460, w:150, h:20},
+      {x:500, y:390, w:130, h:20},
+      {x:680, y:330, w:150, h:20},
+      {x:880, y:390, w:130, h:20},
+      {x:1060,y:450, w:200, h:20},
+      {x:1310,y:390, w:150, h:20},
+      {x:1510,y:320, w:130, h:20},
+      {x:1700,y:260, w:160, h:20},
+      {x:1920,y:320, w:140, h:20},
+      {x:2110,y:390, w:180, h:20},
+      {x:2350,y:330, w:150, h:20},
+      {x:2560,y:270, w:140, h:20},
+      {x:2760,y:330, w:160, h:20},
+      {x:2980,y:390, w:200, h:20},
+      {x:3240,y:450, w:180, h:20},
+      {x:3480,y:390, w:200, h:20},
+      {x:3740,y:520, w:300, h:20},
+    ],
+    floor: {x:0, y:560, w:100, h:40},
+    coins: makeCoins([[320,420],[360,420],[530,350],[680,290],[740,290],[920,350],[1100,410],[1340,350],[1530,280],[1720,220],[1780,220],[1940,280],[2140,350],[2380,290],[2600,230],[2800,290],[3010,350],[3270,410],[3510,350],[3770,480],[3820,480],[3870,480]]),
+    enemies: [
+      {x:350,y:530,type:'jeet',dir:1,speed:1.5},
+      {x:700,y:530,type:'paper',dir:-1,speed:2.2},
+      {x:1120,y:420,type:'paper',dir:1,speed:2.0},
+      {x:1740,y:230,type:'jeet',dir:-1,speed:1.8},
+      {x:2160,y:360,type:'paper',dir:1,speed:2.4},
+      {x:2580,y:240,type:'jeet',dir:-1,speed:1.6},
+      {x:3030,y:360,type:'paper',dir:1,speed:2.2},
+      {x:3530,y:360,type:'paper',dir:-1,speed:2.5},
+    ],
+    powerups: [
+      {x:520,y:360,type:'coffee'},
+      {x:1750,y:200,type:'rocket'},
+      {x:2580,y:240,type:'shield'},
+      {x:3840,y:450,type:'magnet'},
+    ],
+    goal: {x:3900, y:460},
+    startX: 60, startY: 490,
+  },
+  // LEVEL 3 — THE BEAR MARKET (BOSS)
+  {
+    name: 'BEAR MARKET BOSS', sub: 'Defeat The Bear · Claim The Vault!',
+    tips: 'Stomp the BEAR BOSS 5 times to defeat him! Watch out for his charge!',
+    bg1: '#1a0a0a', bg2: '#200f0f', starColor: '#ff3333',
+    width: 2400,
+    platforms: [
+      {x:0,   y:520, w:400, h:20},
+      {x:450, y:460, w:200, h:20},
+      {x:700, y:400, w:180, h:20},
+      {x:930, y:460, w:200, h:20},
+      {x:1180,y:520, w:600, h:20}, // boss arena floor
+      {x:1180,y:360, w:150, h:20}, // arena upper platforms
+      {x:1650,y:360, w:150, h:20},
+      {x:1900,y:460, w:200, h:20},
+      {x:2150,y:520, w:300, h:20},
+    ],
+    floor: {x:0, y:560, w:2400, h:40},
+    coins: makeCoins([[80,490],[130,490],[180,490],[470,420],[520,420],[740,360],[960,420],[1010,420]]),
+    enemies: [
+      {x:500,y:530,type:'jeet',dir:1,speed:1.6},
+      {x:960,y:430,type:'paper',dir:-1,speed:2.3},
+    ],
+    boss: {x:1400, y:400, hp:5, maxHp:5, dir:1, speed:1.0, charging:false, chargeTimer:0, stunTimer:0},
+    powerups: [
+      {x:200,y:480,type:'coffee'},
+      {x:740,y:360,type:'shield'},
+      {x:1200,y:480,type:'rocket'},
+      {x:1650,y:330,type:'magnet'},
+    ],
+    goal: null, // no flag, beat boss
+    startX: 60, startY: 490,
+    isBoss: true,
+  }
+];
+
+function makeCoins(arr) {
+  return arr.map(([x,y]) => ({x, y, collected: false, magnetTimer:0}));
+}
+
+// ══ CURRENT LEVEL STATE ══
+let lvl, platforms, coins, enemies, powerups, boss, goal;
+
+function loadLevel(idx) {
+  const ld = LEVELS[idx];
+  lvl = ld;
+  platforms = [...ld.platforms, ld.floor];
+  coins = ld.coins.map(c => ({...c, collected: false}));
+  enemies = ld.enemies.map(e => ({...e, alive: true, stunTimer: 0, coinSteal: e.type === 'paper' ? 25 : 10}));
+  powerups = ld.powerups.map(p => ({...p, taken: false}));
+  boss = ld.boss ? {...ld.boss, alive: true, hitTimer: 0} : null;
+  goal = ld.goal;
+  resetPlayer(ld.startX, ld.startY - 40);
+  camX = 0;
+  sessionCoins = 0;
+}
+
+// ══ PHYSICS ══
+function updatePlayer() {
+  if (p.dead) return;
+  if (p.invTimer > 0) p.invTimer--;
+  if (p.puTimer > 0) {
+    p.puTimer--;
+    if (p.puTimer === 0) { p.powerup = null; p.shield = false; updatePUIndicator(); }
+  }
+
+  // Input
+  const goLeft  = keys['ArrowLeft']  || keys['KeyA'] || touch.left;
+  const goRight = keys['ArrowRight'] || keys['KeyD'] || touch.right;
+  let spd = SPEED * (p.powerup === 'coffee' ? 1.7 : 1);
+
+  if (goLeft)  { p.vx = -spd; p.facing = -1; }
+  else if (goRight) { p.vx = spd; p.facing = 1; }
+  else p.vx *= 0.7;
+
+  if (p.powerup === 'rocket' && (keys['ArrowUp'] || keys['Space'] || touch.jump)) {
+    p.vy = Math.max(p.vy - 0.4, -14);
+  }
+
+  p.vy += G;
+  p.vy = Math.min(p.vy, 14);
+  p.x += p.vx;
+  p.y += p.vy;
+
+  // Platform collisions
+  p.onGround = false;
+  platforms.forEach(pl => {
+    if (p.x + p.w > pl.x && p.x < pl.x + pl.w &&
+        p.y + p.h > pl.y && p.y + p.h < pl.y + pl.h + 16 && p.vy >= 0) {
+      p.y = pl.y - p.h;
+      p.vy = 0;
+      p.onGround = true;
+      p.jumpsLeft = 2;
+    }
+  });
+
+  // World bounds
+  p.x = Math.max(0, p.x);
+  if (p.x > lvl.width - p.w) p.x = lvl.width - p.w;
+
+  // Fall death
+  if (p.y > 700) loseLife();
+
+  // Camera
+  const targetCam = p.x - W * 0.35;
+  camX += (targetCam - camX) * CAM_LERP;
+  camX = Math.max(0, Math.min(camX, lvl.width - W));
+
+  // Coin collection (magnet range)
+  const magnetRange = p.powerup === 'magnet' ? 160 : 30;
+  coins.forEach(c => {
+    if (c.collected) return;
+    const cx = c.x + 10, cy = c.y + 10;
+    const dx = (p.x + p.w/2) - cx, dy = (p.y + p.h/2) - cy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (p.powerup === 'magnet' && dist < magnetRange) {
+      c.x += dx * 0.12; c.y += dy * 0.12;
+    }
+    if (dist < 22) {
+      c.collected = true;
+      sessionCoins++;
+      totalCoins++;
+      spawnParticles(c.x+10, c.y+10, '#C9A227', 6);
+      updateHUD();
+    }
+  });
+
+  // Power-up collection
+  powerups.forEach(pu => {
+    if (pu.taken) return;
+    if (p.x < pu.x+20 && p.x+p.w > pu.x && p.y < pu.y+20 && p.y+p.h > pu.y) {
+      pu.taken = true;
+      applyPowerup(pu.type);
+    }
+  });
+
+  // Enemy collision
+  if (p.invTimer === 0) {
+    enemies.forEach(e => {
+      if (!e.alive) return;
+      const overlap = p.x < e.x+24 && p.x+p.w > e.x && p.y < e.y+30 && p.y+p.h > e.y;
+      if (!overlap) return;
+      // Stomp from above
+      if (p.vy > 0 && p.y + p.h < e.y + 16) {
+        e.alive = false;
+        p.vy = JUMP * 0.6;
+        spawnParticles(e.x+12, e.y+15, '#ff3333', 8);
+        spawnText(e.x, e.y, 'REKT!', '#ff3333');
+      } else if (!p.shield) {
+        // Hit by enemy
+        const stolen = Math.min(e.coinSteal, totalCoins);
+        totalCoins = Math.max(0, totalCoins - stolen);
+        sessionCoins = Math.max(0, sessionCoins - stolen);
+        spawnText(p.x, p.y-20, `-${stolen}💸`, '#ff3333');
+        p.invTimer = 80;
+        spawnParticles(p.x+11, p.y+17, '#ff3333', 5);
+        updateHUD();
+      } else {
+        // Shield blocks
+        spawnText(p.x, p.y-20, 'BLOCKED! 🛡', '#39ff14');
+        p.shield = false; p.powerup = null; p.puTimer = 0;
+        p.invTimer = 40;
+      }
+    });
+
+    // Boss collision
+    if (boss && boss.alive) {
+      const bo = boss;
+      const bOverlap = p.x < bo.x+60 && p.x+p.w > bo.x && p.y < bo.y+70 && p.y+p.h > bo.y;
+      if (bOverlap) {
+        if (p.vy > 1 && p.y+p.h < bo.y+25 && bo.stunTimer === 0) {
+          // Stomp boss
+          bo.hp--;
+          bo.stunTimer = 60;
+          p.vy = JUMP * 0.7;
+          spawnParticles(bo.x+30, bo.y+10, '#C9A227', 12);
+          spawnText(bo.x, bo.y-20, `HIT! ${bo.hp}HP LEFT`, '#C9A227');
+          if (bo.hp <= 0) { bo.alive = false; bossDefeated(); }
+        } else if (bo.stunTimer === 0 && !p.shield && p.invTimer === 0) {
+          const stolen = Math.min(50, totalCoins);
+          totalCoins = Math.max(0, totalCoins - stolen);
+          sessionCoins = Math.max(0, sessionCoins - stolen);
+          spawnText(p.x, p.y-20, `-${stolen}💸 BEAR HIT!`, '#ff3333');
+          p.invTimer = 90;
+          updateHUD();
+        }
+      }
+    }
+  }
+
+  // Goal
+  if (goal && p.x+p.w > goal.x && p.y+p.h > goal.y && p.y < goal.y+60) {
+    levelComplete();
+  }
+}
+
+function loseLife() {
+  if (p.invTimer > 0) return;
+  p.lives--;
+  updateHUD();
+  if (p.lives <= 0) {
+    gameOver();
+  } else {
+    const ld = LEVELS[currentLevel];
+    resetPlayer(ld.startX, ld.startY - 40);
+    p.invTimer = 120;
+    spawnText(100, 200, `${p.lives} LIVES LEFT`, '#ff3333');
+  }
+}
+
+function applyPowerup(type) {
+  p.powerup = type;
+  p.puTimer = 300;
+  if (type === 'shield') p.shield = true;
+  spawnText(p.x, p.y-30, PU_DATA[type].label, PU_DATA[type].color);
+  updatePUIndicator();
+}
+
+const PU_DATA = {
+  coffee: {emoji:'☕', label:'SPEED BOOST!', color:'#C9A227'},
+  shield: {emoji:'🛡', label:'SHIELD ON!', color:'#39ff14'},
+  magnet: {emoji:'🧲', label:'COIN MAGNET!', color:'#F0C93A'},
+  rocket: {emoji:'🚀', label:'ROCKET BOOST!', color:'#ff9933'},
+};
+
+function updatePUIndicator() {
+  const el = document.getElementById('pu-indicator');
+  if (!p.powerup) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  document.getElementById('pu-name').textContent = PU_DATA[p.powerup].emoji + ' ' + p.powerup.toUpperCase();
+  document.getElementById('pu-timer').textContent = Math.ceil(p.puTimer/60) + 's remaining';
+}
+
+// ══ ENEMIES ══
+function updateEnemies() {
+  enemies.forEach(e => {
+    if (!e.alive) return;
+    if (e.stunTimer > 0) { e.stunTimer--; return; }
+    e.x += e.dir * e.speed;
+    // Patrol within platform
+    const onPlat = platforms.find(pl =>
+      e.x > pl.x - 10 && e.x + 24 < pl.x + pl.w + 10 &&
+      Math.abs(e.y + 30 - pl.y) < 8
+    );
+    if (!onPlat || e.x < (onPlat ? onPlat.x : 0) || e.x + 24 > (onPlat ? onPlat.x + onPlat.w : lvl.width)) {
+      e.dir *= -1;
+    }
+  });
+}
+
+// ══ BOSS ══
+function updateBoss() {
+  if (!boss || !boss.alive) return;
+  if (boss.stunTimer > 0) { boss.stunTimer--; return; }
+  if (boss.hitTimer > 0) boss.hitTimer--;
+
+  // Charge mechanic
+  boss.chargeTimer++;
+  if (boss.chargeTimer > 180) {
+    boss.chargeTimer = 0;
+    boss.charging = true;
+    setTimeout(() => { if(boss) boss.charging = false; }, 1500);
+  }
+  const spd = boss.charging ? boss.speed * 4 : boss.speed;
+  boss.x += boss.dir * spd;
+
+  // Bounce off walls
+  if (boss.x < 1180) { boss.x = 1180; boss.dir = 1; boss.charging = false; }
+  if (boss.x > 1680) { boss.x = 1680; boss.dir = -1; boss.charging = false; }
+
+  // Gravity
+  boss.y = 400; // boss stays on arena floor
+}
+
+function bossDefeated() {
+  // Drop bonus coins
+  for (let i = 0; i < 30; i++) {
+    coins.push({x: 1200 + Math.random()*500, y: 300 + Math.random()*100, collected: false});
+  }
+  spawnText(W/2, H/2-60, '🏆 BOSS DEFEATED! COLLECT THE LOOT!', '#C9A227');
+  setTimeout(() => triggerWin(), 4000);
+}
+
+function levelComplete() {
+  if (currentLevel < LEVELS.length - 1) {
+    currentLevel++;
+    showLevelStart();
+  } else {
+    triggerWin();
+  }
+}
+
+function triggerWin() {
+  gameState = 'win';
+  document.getElementById('screen-win').querySelector('[id]').textContent = totalCoins.toLocaleString();
+  showScreen('screen-win');
+  document.getElementById('controls').style.display = 'none';
+}
+
+function gameOver() {
+  gameState = 'gameover';
+  document.getElementById('go-lvl').textContent = currentLevel + 1;
+  document.getElementById('screen-gameover').querySelector('#go-coins').textContent = totalCoins.toLocaleString();
+  showScreen('screen-gameover');
+  document.getElementById('controls').style.display = 'none';
+}
+
+// ══ PARTICLES ══
+let particles = [], floatTexts = [];
+function spawnParticles(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    particles.push({x, y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5-2,
+      color, life: 30, maxLife: 30, r: Math.random()*4+2});
+  }
+}
+function spawnText(x, y, text, color) {
+  floatTexts.push({x, y, text, color, life: 80, maxLife: 80});
+}
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.vy+=0.1; p.life--; });
+  floatTexts = floatTexts.filter(t => t.life > 0);
+  floatTexts.forEach(t => { t.y -= 0.5; t.life--; });
+}
+
+// ══ DRAW ══
+function drawBg() {
+  // Gradient bg
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, lvl.bg1);
+  grad.addColorStop(1, lvl.bg2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  // Stars
+  ctx.fillStyle = lvl.starColor;
+  ctx.globalAlpha = 0.3;
+  for (let i = 0; i < 40; i++) {
+    const sx = ((i * 137 + currentLevel * 50) % lvl.width - camX) % W;
+    const sy = (i * 73) % (H - 100);
+    if (sx > 0 && sx < W) {
+      ctx.beginPath();
+      ctx.arc(sx, sy, (frameCount/60 + i) % 2 > 1 ? 1.5 : 1, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPlatform(pl) {
+  const sx = pl.x - camX;
+  if (sx > W + 50 || sx + pl.w < -50) return;
+  // Platform body
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(sx, pl.y, pl.w, pl.h);
+  // Gold top border
+  ctx.fillStyle = '#C9A227';
+  ctx.fillRect(sx, pl.y, pl.w, 3);
+  // Grid lines
+  ctx.strokeStyle = '#252525';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < pl.w; x += 32) {
+    ctx.beginPath(); ctx.moveTo(sx+x, pl.y+3); ctx.lineTo(sx+x, pl.y+pl.h); ctx.stroke();
+  }
+}
+
+function drawCoin(c) {
+  if (c.collected) return;
+  const sx = c.x - camX;
+  if (sx < -20 || sx > W + 20) return;
+  const bob = Math.sin(frameCount * 0.08 + c.x * 0.1) * 3;
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(sx+10, c.y+10+bob, 11, 0, Math.PI*2);
+  ctx.fillStyle = '#C9A227';
+  ctx.fill();
+  ctx.strokeStyle = '#F0C93A';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Inner
+  ctx.beginPath();
+  ctx.arc(sx+10, c.y+10+bob, 7, 0, Math.PI*2);
+  ctx.fillStyle = '#D4B23A';
+  ctx.fill();
+  // S
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 9px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('S', sx+10, c.y+10+bob);
+}
+
+function drawEnemy(e) {
+  if (!e.alive) return;
+  const sx = e.x - camX;
+  if (sx < -30 || sx > W + 30) return;
+  const isJeet = e.type === 'jeet';
+  const c = isJeet ? '#ff4444' : '#4488ff';
+
+  // Body
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 2.5;
+  // Head
+  ctx.beginPath();
+  ctx.arc(sx+12, e.y+8, 8, 0, Math.PI*2);
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fill();
+  ctx.stroke();
+  // X eyes
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(sx+9,e.y+5); ctx.lineTo(sx+11,e.y+7); ctx.moveTo(sx+11,e.y+5); ctx.lineTo(sx+9,e.y+7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+13,e.y+5); ctx.lineTo(sx+15,e.y+7); ctx.moveTo(sx+15,e.y+5); ctx.lineTo(sx+13,e.y+7); ctx.stroke();
+  // Body stick
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(sx+12,e.y+16); ctx.lineTo(sx+12,e.y+24); ctx.stroke();
+  // Legs
+  ctx.beginPath(); ctx.moveTo(sx+12,e.y+24); ctx.lineTo(sx+6,e.y+30); ctx.moveTo(sx+12,e.y+24); ctx.lineTo(sx+18,e.y+30); ctx.stroke();
+  // Arms
+  ctx.beginPath(); ctx.moveTo(sx+12,e.y+18); ctx.lineTo(sx+4,e.y+22); ctx.moveTo(sx+12,e.y+18); ctx.lineTo(sx+20,e.y+22); ctx.stroke();
+  // Label
+  ctx.fillStyle = c;
+  ctx.font = 'bold 7px Share Tech Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText(isJeet ? 'JEET' : 'PAPER', sx+12, e.y-4);
+}
+
+function drawBoss() {
+  if (!boss || !boss.alive) return;
+  const sx = boss.x - camX;
+  if (sx < -80 || sx > W + 80) return;
+  const flash = boss.stunTimer > 0 && Math.floor(frameCount/4)%2 === 0;
+  const isCharging = boss.charging;
+
+  // Boss body — giant angry coin
+  ctx.beginPath();
+  ctx.arc(sx+30, boss.y+30, 38, 0, Math.PI*2);
+  ctx.fillStyle = flash ? '#fff' : (isCharging ? '#ff4400' : '#8B6914');
+  ctx.fill();
+  ctx.strokeStyle = flash ? '#ff3333' : '#C9A227';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  // Inner ring
+  ctx.beginPath();
+  ctx.arc(sx+30, boss.y+30, 28, 0, Math.PI*2);
+  ctx.strokeStyle = flash ? '#ff8800' : '#D4B23A';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Angry face
+  ctx.fillStyle = flash ? '#ff3333' : '#000';
+  // Eyes
+  ctx.beginPath(); ctx.arc(sx+20, boss.y+24, 5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx+40, boss.y+24, 5, 0, Math.PI*2); ctx.fill();
+  // Angry brows
+  ctx.strokeStyle = flash ? '#ff0000' : '#C9A227';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(sx+14, boss.y+18); ctx.lineTo(sx+26, boss.y+21); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+46, boss.y+18); ctx.lineTo(sx+34, boss.y+21); ctx.stroke();
+  // Frown
+  ctx.beginPath(); ctx.arc(sx+30, boss.y+42, 12, 0.2*Math.PI, 0.8*Math.PI, true); ctx.stroke();
+  // Legs
+  ctx.strokeStyle = '#8B6914';
+  ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(sx+20, boss.y+65); ctx.lineTo(sx+14, boss.y+80); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+40, boss.y+65); ctx.lineTo(sx+46, boss.y+80); ctx.stroke();
+  // HP bar
+  const hpW = 80;
+  ctx.fillStyle = '#111';
+  ctx.fillRect(sx-10, boss.y-20, hpW, 10);
+  ctx.fillStyle = boss.hp > 2 ? '#39ff14' : '#ff3333';
+  ctx.fillRect(sx-10, boss.y-20, hpW * (boss.hp/boss.maxHp), 10);
+  ctx.strokeStyle = '#C9A227'; ctx.lineWidth = 1;
+  ctx.strokeRect(sx-10, boss.y-20, hpW, 10);
+  // BOSS label
+  ctx.fillStyle = '#C9A227';
+  ctx.font = 'bold 9px Share Tech Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText(isCharging ? '⚡ CHARGING!' : 'THE BEAR', sx+30, boss.y-24);
+}
+
+function drawGoal() {
+  if (!goal) return;
+  const sx = goal.x - camX;
+  if (sx < -20 || sx > W + 20) return;
+  // Flag pole
+  ctx.fillStyle = '#555';
+  ctx.fillRect(sx, goal.y - 80, 4, 100);
+  // Flag
+  const wave = Math.sin(frameCount * 0.08) * 4;
+  ctx.fillStyle = '#C9A227';
+  ctx.beginPath();
+  ctx.moveTo(sx+4, goal.y-80);
+  ctx.lineTo(sx+30+wave, goal.y-68);
+  ctx.lineTo(sx+4, goal.y-56);
+  ctx.fill();
+  // S
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 11px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('$', sx+16, goal.y-67);
+}
+
+function drawPowerup(pu) {
+  if (pu.taken) return;
+  const sx = pu.x - camX;
+  if (sx < -20 || sx > W + 20) return;
+  const bob = Math.sin(frameCount * 0.1 + pu.x * 0.05) * 4;
+  const d = PU_DATA[pu.type];
+  ctx.beginPath();
+  ctx.arc(sx+10, pu.y+10+bob, 14, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(201,162,39,0.15)';
+  ctx.fill();
+  ctx.strokeStyle = '#C9A227';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.font = '16px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(d.emoji, sx+10, pu.y+10+bob);
+}
+
+function drawPlayer() {
+  if (!p) return;
+  const sx = p.x - camX;
+  // Blink when invincible
+  if (p.invTimer > 0 && Math.floor(p.invTimer/6)%2 === 0) return;
+
+  ctx.save();
+  ctx.translate(sx + p.w/2, p.y);
+  if (p.facing === -1) ctx.scale(-1, 1);
+
+  // Shield aura
+  if (p.shield) {
+    ctx.beginPath();
+    ctx.arc(0, p.h/2, 24, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(57,255,20,0.15)';
+    ctx.fill();
+    ctx.strokeStyle = '#39ff14';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // Magnet aura
+  if (p.powerup === 'magnet') {
+    ctx.beginPath();
+    ctx.arc(0, p.h/2, 18, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(240,201,58,0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // COIN HEAD
+  ctx.beginPath();
+  ctx.arc(0, 10, 12, 0, Math.PI*2);
+  ctx.fillStyle = '#FEFEFE';
+  ctx.fill();
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  // Crown
+  ctx.fillStyle = '#C9A227';
+  ctx.beginPath();
+  ctx.moveTo(-10, 2); ctx.lineTo(-7, -4); ctx.lineTo(-3, 0); ctx.lineTo(0, -6);
+  ctx.lineTo(3, 0); ctx.lineTo(7, -4); ctx.lineTo(10, 2); ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5; ctx.stroke();
+  // Eyes
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(-4, 10, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(4, 10, 2.5, 0, Math.PI*2); ctx.fill();
+  // Smile
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(0, 13, 4, 0.1*Math.PI, 0.9*Math.PI); ctx.stroke();
+
+  // Body
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, 22); ctx.lineTo(0, p.h-8); ctx.stroke();
+  // Running legs
+  const legAngle = p.onGround ? Math.sin(frameCount*0.25)*0.4 : 0.2;
+  ctx.beginPath();
+  ctx.moveTo(0, p.h-8);
+  ctx.lineTo(-8*Math.cos(legAngle+0.3), p.h-8 + 10*Math.abs(Math.sin(legAngle+0.3)));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, p.h-8);
+  ctx.lineTo(8*Math.cos(legAngle), p.h-8 + 10*Math.abs(Math.sin(legAngle)));
+  ctx.stroke();
+  // Arms
+  const armSwing = p.onGround ? Math.sin(frameCount*0.25)*8 : 5;
+  ctx.beginPath();
+  ctx.moveTo(0, 26);
+  ctx.lineTo(-10, 26 + armSwing);
+  ctx.moveTo(0, 26);
+  ctx.lineTo(10, 26 - armSwing);
+  ctx.stroke();
+  // Medal
+  ctx.beginPath();
+  ctx.arc(0, 28, 5, 0, Math.PI*2);
+  ctx.fillStyle = '#C9A227'; ctx.fill();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 5px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('S', 0, 28);
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  particles.forEach(pt => {
+    ctx.globalAlpha = pt.life / pt.maxLife;
+    ctx.beginPath();
+    ctx.arc(pt.x - camX, pt.y, pt.r, 0, Math.PI*2);
+    ctx.fillStyle = pt.color;
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  floatTexts.forEach(t => {
+    ctx.globalAlpha = t.life / t.maxLife;
+    ctx.font = 'bold 11px Share Tech Mono';
+    ctx.fillStyle = t.color;
+    ctx.textAlign = 'center';
+    ctx.fillText(t.text, t.x - camX, t.y);
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ══ HUD ══
+function updateHUD() {
+  document.getElementById('h-coins').textContent = totalCoins.toLocaleString();
+  document.getElementById('h-level').textContent = currentLevel + 1;
+  const hearts = p ? (p.lives === 3 ? '❤️❤️❤️' : p.lives === 2 ? '❤️❤️🖤' : p.lives === 1 ? '❤️🖤🖤' : '🖤🖤🖤') : '❤️❤️❤️';
+  document.getElementById('h-lives').textContent = hearts;
+}
+
+// ══ SCREEN MANAGEMENT ══
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  if (id) document.getElementById(id).classList.add('active');
+}
+
+function showLevelStart() {
+  const ld = LEVELS[currentLevel];
+  gameState = 'levelstart';
+  document.getElementById('ls-badge').textContent = 'LEVEL ' + (currentLevel+1);
+  document.getElementById('ls-title').textContent = ld.name;
+  document.getElementById('ls-sub').textContent = ld.sub;
+  document.getElementById('ls-tips').textContent = ld.tips;
+  loadLevel(currentLevel);
+  showScreen('screen-level');
+  document.getElementById('controls').style.display = isMobile() ? 'block' : 'none';
+  updateHUD();
+}
+
+function isMobile() {
+  return /Android|iPhone|iPad|iPod|Touch/i.test(navigator.userAgent) || window.innerWidth < 700;
+}
+
+// ══ CLAIM FLOW ══
+let claimCode = '';
+function openClaim() {
+  claimCode = 'SCOIN-' + Math.random().toString(36).substr(2,6).toUpperCase();
+  document.getElementById('claim-coins-display').textContent = totalCoins.toLocaleString();
+  document.getElementById('claim-code-display').textContent = claimCode;
+  // Reset steps
+  ['cstep1','cstep2','cstep3','cstep-success'].forEach(s => {
+    document.getElementById(s).classList.remove('active');
+  });
+  document.getElementById('cstep1').classList.add('active');
+  ['dot1','dot2','dot3'].forEach((d,i) => {
+    document.getElementById(d).className = 'c-step-dot' + (i===0?' active':'');
+  });
+  document.getElementById('btn-after-tweet').disabled = true;
+  document.getElementById('claim-modal').classList.add('open');
+}
+
+function closeClaim() {
+  document.getElementById('claim-modal').classList.remove('open');
+  // Reset game
+  currentLevel = 0; totalCoins = 0;
+  showScreen('screen-menu');
+  fetchPool();
+}
+
+// Tweet step
+document.getElementById('btn-tweet-score').addEventListener('click', () => {
+  const msg = encodeURIComponent(
+    `I just collected ${totalCoins.toLocaleString()} $SCOIN in Sticky Jump!\n\n` +
+    `Claim code: ${claimCode}\n` +
+    `Play & earn real tokens: https://stickcoin.xyz\n` +
+    `@Stickcoin1 #Solana #SCOIN #WAGMI`
+  );
+  window.open('https://twitter.com/intent/tweet?text=' + msg, '_blank');
+  setTimeout(() => { document.getElementById('btn-after-tweet').disabled = false; }, 5000);
+});
+
+document.getElementById('btn-after-tweet').addEventListener('click', () => {
+  document.getElementById('cstep1').classList.remove('active');
+  document.getElementById('cstep2').classList.add('active');
+  document.getElementById('dot1').className = 'c-step-dot done';
+  document.getElementById('dot2').className = 'c-step-dot active';
+});
+
+// Wallet submit
+document.getElementById('btn-submit-claim').addEventListener('click', () => {
+  const xname = document.getElementById('c-xname').value.trim();
+  const wallet = document.getElementById('c-wallet').value.trim();
+  if (!xname || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) {
+    document.getElementById('c-err').style.display = 'block'; return;
+  }
+  document.getElementById('c-err').style.display = 'none';
+
+  // Netlify form submit
+  const fd = new FormData();
+  fd.append('form-name', 'sticky-jump-claim');
+  fd.append('x_username', xname);
+  fd.append('wallet', wallet);
+  fd.append('coins', totalCoins);
+  fd.append('level_reached', currentLevel + 1);
+  fd.append('claim_code', claimCode);
+  fd.append('timestamp', new Date().toISOString());
+  fetch('/', {method: 'POST', body: fd}).catch(() => {});
+
+  // Deduct from pool
+  deductPool(totalCoins);
+
+  document.getElementById('cstep2').classList.remove('active');
+  document.getElementById('cstep3').classList.add('active');
+  document.getElementById('dot2').className = 'c-step-dot done';
+  document.getElementById('dot3').className = 'c-step-dot active';
+});
+
+// DM on X
+document.getElementById('btn-dm-x').addEventListener('click', () => {
+  const dmText = encodeURIComponent(`CLAIM ${claimCode} ${document.getElementById('c-wallet').value.trim()}`);
+  window.open(`https://twitter.com/messages/compose?recipient_id=Stickcoin1&text=${dmText}`, '_blank');
+  setTimeout(() => {
+    document.getElementById('cstep3').classList.remove('active');
+    document.getElementById('cstep-success').classList.add('active');
+    document.getElementById('dot3').className = 'c-step-dot done';
+  }, 2000);
+});
+
+// Screen buttons
+document.getElementById('btn-play').addEventListener('click', () => {
+  currentLevel = 0; totalCoins = 0;
+  showLevelStart();
+});
+document.getElementById('btn-levelgo').addEventListener('click', () => {
+  gameState = 'playing';
+  showScreen(null);
+  updateHUD();
+});
+document.getElementById('btn-claim-go').addEventListener('click', openClaim);
+document.getElementById('btn-claim-win').addEventListener('click', openClaim);
+document.getElementById('btn-retry').addEventListener('click', () => {
+  currentLevel = 0; totalCoins = 0;
+  showLevelStart();
+});
+document.getElementById('btn-play-again').addEventListener('click', () => {
+  currentLevel = 0; totalCoins = 0;
+  showLevelStart();
+});
+
+// ══ MAIN LOOP ══
+function loop() {
+  requestAnimationFrame(loop);
+  frameCount++;
+
+  if (gameState !== 'playing') {
+    if (gameState === 'menu' || gameState === 'gameover' || gameState === 'win' || gameState === 'levelstart') {
+      // Draw bg even on menu
+      if (currentLevel < LEVELS.length && lvl) {
+        drawBg();
+      } else {
+        ctx.fillStyle = '#050705';
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+    return;
+  }
+
+  // Clear
+  drawBg();
+
+  // World
+  platforms.forEach(drawPlatform);
+  coins.forEach(drawCoin);
+  powerups.forEach(drawPowerup);
+  drawGoal();
+
+  // Entities
+  updateEnemies();
+  enemies.forEach(drawEnemy);
+  if (boss) { updateBoss(); drawBoss(); }
+
+  // Player
+  updatePlayer();
+  drawPlayer();
+
+  // Particles
+  updateParticles();
+  drawParticles();
+
+  // PU timer update
+  if (p.powerup) updatePUIndicator();
+}
+
+// ══ INIT ══
+fetchPool();
+loadLevel(0);
+loop();
+</script>
+</body>
+</html>

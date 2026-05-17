@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>$SCOIN – The 10M Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Share+Tech+Mono&family=Permanent+Marker&display=swap" rel="stylesheet">
+
+<!-- NETLIFY FORM -->
+<form name="vault-claim" netlify netlify-honeypot="bot-field" hidden>
+  <input name="bot-field">
+  <input name="username" type="text">
+  <input name="wallet" type="text">
+  <input name="score" type="text">
+  <input name="tier" type="text">
+  <input name="tap_count" type="text">
+  <input name="session_minutes" type="text">
+  <input name="timestamp" type="text">
+</form>
+
+<style>
+:root{--gold:#C9A227;--gold2:#F0C93A;--green:#39ff14;--red:#ff3333;--black:#050705;--panel:#0d0d0d;--border:#1e1e1e;--cream:#F0E6CC;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--black);color:#fff;font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden;touch-action:manipulation;user-select:none;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);pointer-events:none;z-index:9998;}
+
+/* LAYOUT */
+.wrap{max-width:980px;margin:0 auto;padding:14px;display:grid;grid-template-columns:1fr 280px;gap:14px;align-items:start;}
+@media(max-width:660px){.wrap{grid-template-columns:1fr;}}
+
+/* HEADER */
+.hdr{grid-column:1/-1;text-align:center;border:2px solid var(--gold);background:var(--panel);padding:12px 20px;position:relative;overflow:hidden;}
+.hdr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(201,162,39,.05),transparent);animation:sweep 3s linear infinite;}
+@keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.hdr-title{font-family:'Bangers',cursive;font-size:clamp(24px,5vw,46px);letter-spacing:5px;color:var(--gold);text-shadow:0 0 20px rgba(201,162,39,.4);line-height:1;}
+.hdr-sub{font-size:10px;color:#444;letter-spacing:3px;margin-top:3px;}
+.ldot{display:inline-block;width:7px;height:7px;background:var(--green);border-radius:50%;margin-right:5px;animation:ld 1.2s ease-in-out infinite;}
+@keyframes ld{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(57,255,20,.4)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(57,255,20,0)}}
+
+/* GAME PANEL */
+.gpanel{background:var(--panel);border:2px solid var(--border);padding:18px;}
+
+/* SCORE */
+.score-wrap{text-align:center;margin-bottom:12px;}
+.score-num{font-family:'Bangers',cursive;font-size:clamp(42px,8vw,74px);line-height:1;color:#fff;text-shadow:0 0 20px rgba(57,255,20,.12);letter-spacing:2px;}
+.score-lbl{color:var(--green);font-size:11px;letter-spacing:4px;}
+.stats{display:flex;justify-content:center;gap:16px;font-size:10px;color:#383838;margin-top:6px;flex-wrap:wrap;}
+.stats span{color:var(--gold);}
+
+/* DAILY LIMIT BAR */
+.auto-bar-wrap{margin:8px 0;background:#080808;border:1px solid #181818;padding:7px 10px;}
+.auto-bar-lbl{font-size:9px;color:#333;letter-spacing:2px;margin-bottom:5px;display:flex;justify-content:space-between;}
+.auto-bar-lbl span{color:var(--gold);}
+.auto-bar{height:4px;background:#111;border-radius:2px;overflow:hidden;}
+.auto-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--green));border-radius:2px;transition:width 1s;}
+
+/* BOT WARNING */
+.bot-warn{display:none;background:rgba(255,51,51,.08);border:1px solid var(--red);color:var(--red);padding:7px 10px;font-size:10px;text-align:center;margin-bottom:8px;letter-spacing:.5px;}
+
+/* MASCOT */
+.mascot-wrap{position:relative;width:190px;height:190px;margin:10px auto;cursor:pointer;border:2px dashed #252525;border-radius:10px;background:#080808;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:transform .03s,border-color .2s,box-shadow .2s;}
+.mascot-wrap:active{transform:scale(0.89);}
+.mascot-wrap.jeet{border-color:var(--red);box-shadow:0 0 20px rgba(255,51,51,.2);}
+.mascot-wrap.moon{border-color:var(--green);box-shadow:0 0 20px rgba(57,255,20,.2);}
+.mascot-wrap.combo{border-color:var(--gold2);box-shadow:0 0 20px rgba(240,201,58,.3);}
+.mascot-img{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;z-index:2;}
+.mascot-fb{width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1;}
+.tap-hint{text-align:center;font-size:10px;color:#252525;letter-spacing:2px;margin-bottom:8px;animation:bh 2s step-end infinite;}
+@keyframes bh{0%,100%{opacity:.3}50%{opacity:.9}}
+.pop{position:absolute;font-family:'Bangers',cursive;font-size:24px;pointer-events:none;z-index:10;animation:pup .5s ease-out forwards;}
+@keyframes pup{0%{opacity:1;transform:translateY(0) scale(1.3);}100%{opacity:0;transform:translateY(-75px) scale(.6);}}
+
+/* COMBO */
+.combo-display{text-align:center;font-family:'Bangers',cursive;font-size:13px;color:#2a2a2a;letter-spacing:2px;margin-bottom:6px;height:16px;transition:color .2s;}
+.combo-display.active{color:var(--gold2);}
+
+/* UPGRADES */
+.upgrades{display:flex;flex-direction:column;gap:6px;margin-bottom:9px;}
+.upg{background:var(--panel);border:1px solid var(--border);color:#fff;padding:9px 13px;font-family:'Share Tech Mono',monospace;font-size:11px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;transition:border-color .2s,background .2s;}
+.upg:not(:disabled):hover{border-color:var(--gold);background:#0f0f0a;}
+.upg:not(:disabled):active{transform:translateY(1px);}
+.upg:disabled{opacity:.22;cursor:not-allowed;}
+.un{color:var(--gold);}
+.ue{color:var(--green);font-size:9px;}
+.uc{color:#383838;font-size:9px;}
+
+/* STATUS */
+.status{background:#080808;border:1px solid #151515;padding:8px 11px;font-size:11px;min-height:34px;color:var(--green);letter-spacing:.4px;transition:all .3s;}
+.status.jeet{border-color:var(--red)!important;color:var(--red)!important;animation:sfeed .3s ease;}
+@keyframes sfeed{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.tweet-btn{width:100%;background:#1DA1F2;color:#fff;border:none;padding:10px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;margin-top:6px;transition:background .15s;}
+.tweet-btn:hover{background:#1a91da;}
+
+/* PRIZE PANEL */
+.ppanel{background:var(--panel);border:2px solid var(--gold);position:sticky;top:14px;}
+.phdr{background:var(--gold);color:#000;padding:9px 14px;font-family:'Bangers',cursive;font-size:17px;letter-spacing:3px;text-align:center;}
+.plist{padding:9px;}
+.tier{border:1px solid #151515;padding:8px 10px;margin-bottom:6px;transition:border-color .3s,background .3s;}
+.tier.unlocked{border-color:var(--gold);background:rgba(201,162,39,.04);}
+.tier.claimed{border-color:#1e1e1e;opacity:.4;}
+.tier.legendary{border-color:#2a2a2a;background:linear-gradient(135deg,rgba(201,162,39,.05),transparent);}
+.tier.legendary .tprize{color:var(--gold2);text-shadow:0 0 8px rgba(201,162,39,.35);}
+.ttop{display:flex;align-items:center;gap:6px;margin-bottom:2px;}
+.temoji{font-size:17px;}
+.ttitle{font-family:'Permanent Marker',cursive;font-size:11px;color:#bbb;}
+.tscore{font-size:9px;color:#303030;margin-bottom:2px;}
+.tprize{font-family:'Bangers',cursive;font-size:14px;color:var(--gold);letter-spacing:1px;}
+.tbar{height:2px;background:#0f0f0f;margin-top:6px;border-radius:1px;overflow:hidden;}
+.tbar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .6s;border-radius:1px;}
+.tclaim{display:none;width:100%;margin-top:6px;background:var(--gold);color:#000;border:none;padding:6px;font-family:'Bangers',cursive;font-size:14px;letter-spacing:2px;cursor:pointer;animation:pc 1.5s ease-in-out infinite;}
+@keyframes pc{0%,100%{box-shadow:0 0 0 0 rgba(201,162,39,.5)}50%{box-shadow:0 0 0 5px rgba(201,162,39,0)}}
+.tclaim:hover{background:var(--gold2);}
+.tier.unlocked .tclaim{display:block;}
+.tclaimed{display:none;font-size:9px;color:#2a2a2a;margin-top:4px;letter-spacing:1px;}
+.tier.claimed .tclaimed{display:block;}
+.tier.claimed .tclaim{display:none!important;}
+.legbadge{display:inline-block;background:var(--gold);color:#000;font-size:7px;padding:1px 4px;font-weight:bold;letter-spacing:2px;margin-left:4px;vertical-align:middle;}
+.vtotal{padding:7px 10px;font-size:9px;border-top:1px solid #0f0f0f;display:flex;justify-content:space-between;color:#252525;}
+.vtotal span{color:var(--gold);}
+.vnote{padding:8px 10px;font-size:9px;color:#252525;border-top:1px solid #0a0a0a;letter-spacing:.3px;line-height:1.8;}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:9000;align-items:center;justify-content:center;padding:16px;}
+.overlay.open{display:flex;}
+.modal{background:var(--panel);border:2px solid var(--gold);padding:26px;max-width:400px;width:100%;position:relative;box-shadow:0 0 40px rgba(201,162,39,.18);}
+.mx{position:absolute;top:10px;right:13px;background:none;border:none;color:#383838;font-size:19px;cursor:pointer;}
+.mx:hover{color:#fff;}
+.mtitle{font-family:'Bangers',cursive;font-size:26px;color:var(--gold);letter-spacing:4px;margin-bottom:2px;}
+.mtier{font-size:10px;color:#383838;letter-spacing:2px;margin-bottom:14px;}
+.pbox{background:#080808;border:1px solid var(--gold);padding:12px;text-align:center;margin-bottom:14px;}
+.pbox-lbl{font-size:9px;color:#383838;margin-bottom:2px;letter-spacing:2px;}
+.pbox-amt{font-family:'Bangers',cursive;font-size:30px;color:var(--gold);letter-spacing:2px;text-shadow:0 0 10px rgba(201,162,39,.3);}
+
+/* MATH */
+.math-q{font-size:12px;color:#666;margin-bottom:7px;letter-spacing:.4px;}
+.math-q strong{color:var(--gold);font-size:22px;}
+.math-in{width:100%;background:#080808;border:1px solid #2a2a2a;color:var(--gold);padding:10px;font-family:'Share Tech Mono',monospace;font-size:20px;outline:none;text-align:center;letter-spacing:2px;}
+.math-in:focus{border-color:var(--gold);}
+.math-err{font-size:10px;color:var(--red);margin-top:4px;display:none;}
+.math-btn{width:100%;background:#181818;color:var(--gold);border:1px solid var(--gold);padding:10px;font-family:'Bangers',cursive;font-size:17px;letter-spacing:2px;cursor:pointer;margin-top:7px;transition:background .15s;}
+.math-btn:hover{background:rgba(201,162,39,.08);}
+
+/* WALLET */
+.wstep{display:none;}
+.slbl{font-size:10px;color:#484848;margin-bottom:9px;line-height:1.8;}
+.flbl{font-size:8px;color:#303030;margin-bottom:3px;letter-spacing:2px;}
+.nin,.win{width:100%;background:#080808;border:1px solid #222;color:var(--gold);padding:10px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;margin-bottom:6px;letter-spacing:.4px;}
+.nin:focus,.win:focus{border-color:var(--gold);}
+.nin::placeholder,.win::placeholder{color:#1e1e1e;}
+.sbtn{width:100%;background:var(--gold);color:#000;border:none;padding:12px;font-family:'Bangers',cursive;font-size:19px;letter-spacing:3px;cursor:pointer;transition:background .15s;}
+.sbtn:hover{background:var(--gold2);}
+.sbtn:disabled{background:#1e1e1e;color:#383838;cursor:not-allowed;}
+.ferr{font-size:10px;color:var(--red);margin-top:4px;display:none;}
+.fnote{font-size:9px;color:#1e1e1e;margin-top:8px;line-height:1.9;letter-spacing:.3px;}
+
+/* SUCCESS */
+.sstep{display:none;text-align:center;padding:8px 0;}
+.sicon{font-size:50px;margin-bottom:12px;}
+.stitle{font-family:'Bangers',cursive;font-size:24px;color:var(--gold);letter-spacing:3px;margin-bottom:7px;}
+.stext{font-size:11px;color:#484848;line-height:1.9;}
+.stweet{width:100%;background:#1DA1F2;color:#fff;border:none;padding:10px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;margin-top:12px;}
+
+/* BOT BLOCKED */
+.bstep{display:none;text-align:center;padding:8px 0;}
+.bstep .bi{font-size:46px;margin-bottom:10px;}
+.bstep h3{font-family:'Bangers',cursive;font-size:20px;color:var(--red);letter-spacing:3px;margin-bottom:7px;}
+.bstep p{font-size:11px;color:#484848;line-height:1.9;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-title">🏆 THE 10M VAULT</div>
+    <div class="hdr-sub"><span class="ldot"></span>$SCOIN Accumulation Terminal · Tap to earn · Claim real tokens</div>
+  </div>
+
+  <!-- GAME -->
+  <div class="gpanel">
+    <div class="bot-warn" id="bot-warn">⚠ Suspicious tap speed detected. Bots are not eligible for prizes.</div>
+
+    <div class="score-wrap">
+      <div class="score-num" id="score-display">0</div>
+      <div class="score-lbl">BLOCKS ACCUMULATED</div>
+      <div class="stats">
+        <div>TAP: <span id="sp">+1</span></div>
+        <div>AUTO: <span id="sa">+0</span>/hr</div>
+        <div>COMBO: <span id="sc">x1</span></div>
+        <div>SESSION: <span id="st">0m</span></div>
+      </div>
+    </div>
+
+    <!-- AUTO RATE BAR -->
+    <div class="auto-bar-wrap">
+      <div class="auto-bar-lbl">
+        <span>PASSIVE PUMP (capped at 500/hr)</span>
+        <span id="auto-pct">0%</span>
+      </div>
+      <div class="auto-bar"><div class="auto-bar-fill" id="auto-bar" style="width:0%"></div></div>
+    </div>
+
+    <!-- COMBO -->
+    <div class="combo-display" id="combo-display">TAP TO START COMBO</div>
+
+    <div class="tap-hint">[ TAP THE STICK TO ACCUMULATE ]</div>
+    <div class="mascot-wrap" id="mascot">
+      <img src="1000079781.jpg" id="mascot-img" class="mascot-img" alt="Stick"
+        onerror="this.style.display='none';document.getElementById('mfb').style.display='flex'">
+      <div class="mascot-fb" id="mfb" style="display:none;">
+        <svg viewBox="0 0 200 300" width="140" height="210" xmlns="http://www.w3.org/2000/svg" fill="none">
+          <circle cx="100" cy="70" r="55" fill="#FEFEFE" stroke="#111" stroke-width="4"/>
+          <path d="M60 58 Q68 52 76 57" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M122 56 Q130 50 138 55" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M60 68 Q68 60 76 68" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <ellipse cx="68" cy="70" rx="5" ry="4" fill="#111"/>
+          <path d="M122 66 Q130 58 138 66" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <ellipse cx="130" cy="68" rx="5" ry="4" fill="#111"/>
+          <path d="M88 92 Q100 104 118 94" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <rect x="78" y="38" width="38" height="14" rx="4" fill="#F5CBA7" stroke="#111" stroke-width="2" transform="rotate(-5,97,45)"/>
+          <path d="M50 46 L60 14 L78 32 L100 8 L122 32 L140 14 L150 46 Z" fill="#C9A227" stroke="#111" stroke-width="3"/>
+          <circle cx="100" cy="20" r="6" fill="#E74C3C" stroke="#111" stroke-width="1.5"/>
+          <circle cx="78" cy="30" r="4" fill="#3498DB" stroke="#111" stroke-width="1.5"/>
+          <circle cx="122" cy="30" r="4" fill="#2ECC71" stroke="#111" stroke-width="1.5"/>
+          <line x1="100" y1="125" x2="100" y2="230" stroke="#111" stroke-width="9" stroke-linecap="round"/>
+          <line x1="100" y1="230" x2="68" y2="295" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+          <line x1="100" y1="230" x2="132" y2="295" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+          <line x1="100" y1="155" x2="48" y2="192" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+          <line x1="100" y1="155" x2="152" y2="192" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+          <circle cx="100" cy="175" r="16" fill="#C9A227" stroke="#111" stroke-width="2.5"/>
+          <text x="100" y="180" text-anchor="middle" font-family="Arial Black" font-size="11" fill="#111" font-weight="900">S</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="upgrades">
+      <button class="upg" id="u-coffee" disabled>
+        <div><div class="un">☕ APE GM COFFEE</div><div class="ue">+1 tap power</div></div>
+        <div class="uc" id="c-coffee">50 blocks</div>
+      </button>
+      <button class="upg" id="u-shill" disabled>
+        <div><div class="un">📢 SHILL INFLUENCER</div><div class="ue">+50 blocks/hr passive</div></div>
+        <div class="uc" id="c-shill">200 blocks</div>
+      </button>
+      <button class="upg" id="u-whale" disabled>
+        <div><div class="un">🐳 BRIBE A WHALE</div><div class="ue">+10 tap power</div></div>
+        <div class="uc" id="c-whale">5,000 blocks</div>
+      </button>
+      <button class="upg" id="u-bot" disabled>
+        <div><div class="un">🤖 DEPLOY BOT ARMY</div><div class="ue">+200 blocks/hr passive</div></div>
+        <div class="uc" id="c-bot">50,000 blocks</div>
+      </button>
+      <button class="upg" id="u-algo" disabled>
+        <div><div class="un">📡 HIRE ALGO TRADER</div><div class="ue">+5 tap · +100 blocks/hr</div></div>
+        <div class="uc" id="c-algo">250,000 blocks</div>
+      </button>
+    </div>
+
+    <div class="status" id="status">Terminal active. Tap the stick. Secure your bags. 🟢</div>
+    <button class="tweet-btn" id="btn-tweet">🐦 FLEX YOUR SCORE ON X</button>
+  </div>
+
+  <!-- PRIZES -->
+  <div class="ppanel">
+    <div class="phdr">🏆 VAULT PRIZES</div>
+    <div class="plist" id="plist"></div>
+    <div class="vtotal"><div>VAULT TOTAL</div><div><span>10,000,000</span> $SCOIN</div></div>
+    <div class="vnote">
+      📋 Reach a tier → CLAIM → pass check → enter details → we send within 24h.<br><br>
+      ⏱ Auto-blocks capped at <strong style="color:var(--gold)">500/hr max</strong>. Real grinding required.<br><br>
+      👑 VAULT LEGEND is <strong style="color:var(--gold)">ONCE EVER</strong>.
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="mx" id="mx">✕</button>
+
+    <!-- MATH STEP -->
+    <div id="s-math">
+      <div class="mtitle">SECURITY CHECK</div>
+      <div class="mtier">Prove you're human, ser 🧠</div>
+      <div class="pbox"><div class="pbox-lbl">YOUR PRIZE</div><div class="pbox-amt" id="m-prize">0 $SCOIN</div></div>
+      <div class="math-q">Solve this:<br><strong id="m-q">? + ? = ?</strong></div>
+      <input class="math-in" id="m-ans" type="number" placeholder="?" autocomplete="off">
+      <div class="math-err" id="m-err">❌ Wrong answer. Try again.</div>
+      <button class="math-btn" id="m-btn">VERIFY →</button>
+    </div>
+
+    <!-- WALLET STEP -->
+    <div id="s-wallet" class="wstep">
+      <div class="mtitle">CLAIM REWARD</div>
+      <div class="mtier" id="w-tier">TIER</div>
+      <div class="pbox"><div class="pbox-lbl">YOUR PRIZE</div><div class="pbox-amt" id="w-prize">0 $SCOIN</div></div>
+      <div class="slbl">Enter your details. We verify & send $SCOIN within 24h. Ensure your wallet accepts SPL tokens.</div>
+      <div class="flbl">TELEGRAM / NAME</div>
+      <input class="nin" id="f-name" placeholder="@yourtelegram or name..." maxlength="60" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="flbl">SOLANA WALLET ADDRESS</div>
+      <input class="win" id="f-wallet" placeholder="Your Solana wallet..." maxlength="64" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="ferr" id="f-err">⚠ Fill in all fields with a valid Solana wallet.</div>
+      <button class="sbtn" id="f-submit">SUBMIT CLAIM →</button>
+      <div class="fnote">⚠ One claim per wallet per tier. Score, tap count & session time are logged. Abuse = ban.</div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="s-success" class="sstep">
+      <div class="sicon">🎉</div>
+      <div class="stitle">SUBMITTED!</div>
+      <div class="stext">Your claim is received.<br>We verify & send within <strong style="color:var(--gold)">24 hours</strong>.<br><br>Flex on the timeline:</div>
+      <button class="stweet" id="s-tweet">🐦 SHARE ON X</button>
+    </div>
+
+    <!-- BOT BLOCKED -->
+    <div id="s-bot" class="bstep">
+      <div class="bi">🤖</div>
+      <h3>BOT DETECTED</h3>
+      <p>Your tap pattern was flagged.<br>Only human degens qualify, ser.<br>Play fair. We log everything. 👀</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── TIERS ──
+const TIERS=[
+  {id:'t1',score:5000,    emoji:'🧻',title:'Paper Hand Survivor',prize:'1,000 $SCOIN',    pn:1000},
+  {id:'t2',score:25000,   emoji:'🦍',title:'Trench Warrior',      prize:'10,000 $SCOIN',   pn:10000},
+  {id:'t3',score:100000,  emoji:'🗿',title:'Diamond Chad',         prize:'100,000 $SCOIN',  pn:100000},
+  {id:'t4',score:500000,  emoji:'🐋',title:'Vril Whale',           prize:'500,000 $SCOIN',  pn:500000},
+  {id:'t5',score:10000000,emoji:'👑',title:'Vault Legend',         prize:'10,000,000 $SCOIN',pn:10000000,legendary:true},
+];
+
+// ── UPGRADES ──
+// autoRate is blocks PER HOUR (capped at MAX_AUTO_HR)
+const MAX_AUTO_HR = 500;
+const UPGRADES=[
+  {id:'coffee',btn:'u-coffee',cel:'c-coffee',base:50,    mult:2.2,tap:1, autoHr:0,   img:'1000079786.jpg',msg:'GM. Caffeine injected. Tap power +1 ☕'},
+  {id:'shill', btn:'u-shill', cel:'c-shill', base:200,   mult:2.6,tap:0, autoHr:50,  img:'1000079785.jpg',msg:'Influencer paid. Passive pump +50/hr 🚀'},
+  {id:'whale', btn:'u-whale', cel:'c-whale', base:5000,  mult:3.0,tap:10,autoHr:0,   img:'1000079781.jpg',msg:'Whale bribed. Tap power +10 🐳'},
+  {id:'bot',   btn:'u-bot',   cel:'c-bot',   base:50000, mult:3.5,tap:0, autoHr:200, img:'1000079781.jpg',msg:'Bot army online. Passive +200/hr 🤖'},
+  {id:'algo',  btn:'u-algo',  cel:'c-algo',  base:250000,mult:4.0,tap:5, autoHr:100, img:'1000079783.jpg',msg:'Algo trader hired. +5 tap +100/hr 📡'},
+];
+
+// ── STATE ──
+const SK='scoin_v4_';
+let score    = parseFloat(localStorage.getItem(SK+'score'))  || 0;
+let tapPower = parseInt(localStorage.getItem(SK+'tap'))      || 1;
+let autoHr   = parseInt(localStorage.getItem(SK+'autoHr'))  || 0; // blocks per hour
+let claimed  = JSON.parse(localStorage.getItem(SK+'claimed')||'{}');
+let costs    = {};
+UPGRADES.forEach(u=>costs[u.id]=parseInt(localStorage.getItem(SK+'cost_'+u.id))||u.base);
+
+// ── ANTI-BOT ──
+const sessionStart=Date.now();
+let tapTimes=[];
+let botFlagged=false;
+let totalTaps=0;
+
+function recordTap(){
+  const now=Date.now();
+  tapTimes.push(now);totalTaps++;
+  tapTimes=tapTimes.filter(t=>now-t<8000);
+  if(tapTimes.length>=25){
+    const span=tapTimes[tapTimes.length-1]-tapTimes[0];
+    if(tapTimes.length/(span/1000)>12){
+      botFlagged=true;
+      document.getElementById('bot-warn').style.display='block';
+    }
+  }
+}
+function sessionMins(){return ((Date.now()-sessionStart)/60000).toFixed(1);}
+function scorePlausible(){
+  const mins=(Date.now()-sessionStart)/60000;
+  return score <= (tapPower*8*60*mins)+(autoHr/60*mins)+50000;
+}
+
+// ── COMBO SYSTEM ──
+let combo=1,comboTimer=null,lastTap=0;
+function updateCombo(){
+  const now=Date.now();
+  const gap=now-lastTap;
+  lastTap=now;
+  if(gap<600){combo=Math.min(combo+1,10);}
+  else{combo=1;}
+  clearTimeout(comboTimer);
+  comboTimer=setTimeout(()=>{combo=1;updateComboDisplay();},1500);
+  updateComboDisplay();
+}
+function updateComboDisplay(){
+  const el=document.getElementById('combo-display');
+  const sc=document.getElementById('sc');
+  if(combo>1){
+    el.textContent=`🔥 COMBO x${combo} — KEEP GOING!`;
+    el.classList.add('active');
+  }else{
+    el.textContent='TAP TO START COMBO';
+    el.classList.remove('active');
+  }
+  sc.textContent='x'+combo;
+}
+
+// ── MATH ──
+let mathAns=0,currentTier=null;
+function genMath(){
+  const ops=['+','+','-','*'];
+  const op=ops[Math.floor(Math.random()*ops.length)];
+  let a,b,ans;
+  if(op==='+'){a=Math.floor(Math.random()*20)+5;b=Math.floor(Math.random()*20)+5;ans=a+b;}
+  else if(op==='-'){a=Math.floor(Math.random()*20)+15;b=Math.floor(Math.random()*10)+1;ans=a-b;}
+  else{a=Math.floor(Math.random()*8)+2;b=Math.floor(Math.random()*8)+2;ans=a*b;}
+  mathAns=ans;
+  document.getElementById('m-q').textContent=`${a} ${op} ${b} = ?`;
+}
+
+// ── FORMAT ──
+function fmt(n){if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return Math.floor(n).toLocaleString();}
+function fmtF(n){return Math.floor(n).toLocaleString();}
+
+// ── BUILD PRIZES ──
+function buildPrizes(){
+  const list=document.getElementById('plist');list.innerHTML='';
+  TIERS.forEach(t=>{
+    const d=document.createElement('div');
+    d.className='tier'+(t.legendary?' legendary':'');d.id='tier-'+t.id;
+    d.innerHTML=`<div class="ttop"><div class="temoji">${t.emoji}</div>
+      <div class="ttitle">${t.title}${t.legendary?'<span class="legbadge">1x EVER</span>':''}</div></div>
+      <div class="tscore">${fmt(t.score)} BLOCKS</div>
+      <div class="tprize">${t.prize}</div>
+      <div class="tbar"><div class="tbar-fill" id="bar-${t.id}" style="width:0%"></div></div>
+      <button class="tclaim" id="claim-${t.id}">⚡ CLAIM NOW</button>
+      <div class="tclaimed">✓ SUBMITTED — PENDING VERIFICATION</div>`;
+    list.appendChild(d);
+    document.getElementById('claim-'+t.id).addEventListener('click',()=>openClaim(t));
+  });
+}
+
+// ── REFRESH ──
+function refresh(){
+  document.getElementById('score-display').textContent=fmtF(score);
+  document.getElementById('sp').textContent='+'+tapPower;
+  // show effective auto (capped)
+  const effAuto=Math.min(autoHr,MAX_AUTO_HR);
+  document.getElementById('sa').textContent='+'+effAuto;
+  document.getElementById('st').textContent=sessionMins()+'m';
+  // auto bar
+  const pct=Math.min(100,(effAuto/MAX_AUTO_HR)*100);
+  document.getElementById('auto-bar').style.width=pct+'%';
+  document.getElementById('auto-pct').textContent=Math.round(pct)+'%';
+
+  UPGRADES.forEach(u=>{
+    document.getElementById(u.btn).disabled=score<costs[u.id];
+    document.getElementById(u.cel).textContent=fmt(costs[u.id])+' blocks';
+  });
+  TIERS.forEach(t=>{
+    const pct2=Math.min(100,(score/t.score)*100);
+    const bar=document.getElementById('bar-'+t.id);
+    const tel=document.getElementById('tier-'+t.id);
+    if(bar)bar.style.width=pct2+'%';
+    if(!tel)return;
+    if(claimed[t.id]){tel.classList.remove('unlocked');tel.classList.add('claimed');}
+    else if(score>=t.score){tel.classList.add('unlocked');tel.classList.remove('claimed');}
+    else{tel.classList.remove('unlocked','claimed');}
+  });
+}
+
+// ── SAVE ──
+function save(){
+  localStorage.setItem(SK+'score',score);
+  localStorage.setItem(SK+'tap',tapPower);
+  localStorage.setItem(SK+'autoHr',autoHr);
+  localStorage.setItem(SK+'claimed',JSON.stringify(claimed));
+  UPGRADES.forEach(u=>localStorage.setItem(SK+'cost_'+u.id,costs[u.id]));
+}
+
+// ── TAP ──
+const mascot=document.getElementById('mascot');
+const mascotImg=document.getElementById('mascot-img');
+mascot.addEventListener('click',e=>{
+  if(navigator.vibrate)navigator.vibrate(22);
+  recordTap();updateCombo();
+
+  let val=tapPower*combo;
+  if(activeEv==='JEET'){
+    val=tapPower*combo*5;
+    pop(e,'+'+val+' DEF','#ff3333');
+    endJeet();return;
+  }
+  score+=val;
+  pop(e,combo>1?`+${val} x${combo}`:`+${val}`,combo>1?'#F0C93A':'#39ff14');
+  refresh();
+
+  TIERS.forEach(t=>{
+    if(score>=t.score&&!claimed[t.id]){
+      const el=document.getElementById('tier-'+t.id);
+      if(el&&!el.classList.contains('unlocked'))
+        setStatus(`🏆 TIER UNLOCKED: ${t.emoji} ${t.title.toUpperCase()}! Tap CLAIM to get your ${t.prize}!`);
+    }
+  });
+});
+
+// ── POP ──
+function pop(e,txt,color){
+  const r=mascot.getBoundingClientRect();
+  const jx=(Math.random()-.5)*40;
+  const el=document.createElement('div');
+  el.className='pop';
+  el.style.left=(e.clientX-r.left+jx)+'px';
+  el.style.top=(e.clientY-r.top)+'px';
+  el.style.color=color;
+  el.textContent=txt;
+  mascot.appendChild(el);
+  setTimeout(()=>el.remove(),520);
+}
+
+// ── STATUS ──
+function setStatus(msg,j=false){
+  const el=document.getElementById('status');
+  el.textContent=msg;j?el.classList.add('jeet'):el.classList.remove('jeet');
+}
+
+// ── UPGRADES ──
+UPGRADES.forEach(u=>{
+  document.getElementById(u.btn).addEventListener('click',()=>{
+    if(score<costs[u.id])return;
+    score-=costs[u.id];tapPower+=u.tap;
+    autoHr=Math.min(autoHr+u.autoHr,MAX_AUTO_HR); // CAP at 500/hr
+    costs[u.id]=Math.floor(costs[u.id]*u.mult);
+    setStatus(u.msg);swapImg(u.img,1400);save();refresh();
+  });
+});
+function swapImg(src,d){mascotImg.src=src;setTimeout(()=>{if(!activeEv)mascotImg.src='1000079781.jpg';},d);}
+
+// ── AUTO TICK — capped at MAX_AUTO_HR per hour ──
+// MAX_AUTO_HR blocks/hr = MAX_AUTO_HR/3600 blocks/sec = runs every 2s → MAX_AUTO_HR/1800 per tick
+setInterval(()=>{
+  const effAuto=Math.min(autoHr,MAX_AUTO_HR);
+  if(effAuto>0){score+=effAuto/1800;refresh();}
+},2000);
+setInterval(save,4000);
+setInterval(()=>{document.getElementById('st').textContent=sessionMins()+'m';},15000);
+
+// ── EVENTS ──
+let activeEv=null;
+setInterval(()=>{
+  if(activeEv)return;
+  const r=Math.random();
+  if(r<0.15)triggerJeet();
+  else if(r>0.87&&score>300)triggerMoon();
+  else if(r>0.75&&r<=0.87&&score>1000)triggerBonus();
+},14000);
+
+function triggerJeet(){
+  activeEv='JEET';mascot.classList.add('jeet');
+  setStatus('🚨 WHALE DUMP INCOMING! SPAM TAP TO DEFEND THE FLOOR! 🚨',true);
+  mascotImg.src='1000079782.jpg';
+}
+function endJeet(){
+  activeEv=null;mascot.classList.remove('jeet');
+  setStatus('Paper hands rekt. Floor secured. Chad behaviour. 🗿');
+  mascotImg.src='1000079781.jpg';save();refresh();
+}
+function triggerMoon(){
+  activeEv='MOON';mascot.classList.add('moon');
+  setStatus('🚀 MOON EVENT! 10x TAP POWER FOR 5 SECONDS — SEND IT! 🚀');
+  mascotImg.src='1000079783.jpg';
+  const base=tapPower;tapPower*=10;refresh();
+  setTimeout(()=>{tapPower=base;activeEv=null;mascot.classList.remove('moon');
+    setStatus('Altitude stabilized. Vril accumulation normalized.');mascotImg.src='1000079781.jpg';save();refresh();},5000);
+}
+function triggerBonus(){
+  activeEv='BONUS';mascot.classList.add('combo');
+  const bonus=Math.floor(score*0.05);score+=bonus;
+  setStatus(`💰 AIRDROP EVENT! +${fmt(bonus)} bonus blocks dropped! 💰`);
+  mascotImg.src='1000079786.jpg';
+  setTimeout(()=>{activeEv=null;mascot.classList.remove('combo');
+    setStatus('Airdrop complete. Keep accumulating.');mascotImg.src='1000079781.jpg';save();refresh();},4000);
+  refresh();
+}
+
+// ── CLAIM ──
+function showStep(id){
+  ['s-math','s-wallet','s-success','s-bot'].forEach(s=>
+    document.getElementById(s).style.display=s===id?'block':'none');
+}
+function openClaim(tier){
+  currentTier=tier;
+  if(botFlagged||!scorePlausible()){
+    document.getElementById('overlay').classList.add('open');
+    showStep('s-bot');return;
+  }
+  document.getElementById('m-prize').textContent=tier.prize;
+  document.getElementById('m-ans').value='';
+  document.getElementById('m-err').style.display='none';
+  genMath();
+  document.getElementById('w-tier').textContent=tier.emoji+' '+tier.title.toUpperCase();
+  document.getElementById('w-prize').textContent=tier.prize;
+  document.getElementById('f-name').value='';
+  document.getElementById('f-wallet').value='';
+  document.getElementById('f-err').style.display='none';
+  document.getElementById('f-submit').disabled=false;
+  document.getElementById('f-submit').textContent='SUBMIT CLAIM →';
+  showStep('s-math');
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('m-ans').focus(),300);
+}
+
+document.getElementById('m-btn').addEventListener('click',checkMath);
+document.getElementById('m-ans').addEventListener('keydown',e=>{if(e.key==='Enter')checkMath();});
+function checkMath(){
+  const ans=parseInt(document.getElementById('m-ans').value);
+  if(isNaN(ans)||ans!==mathAns){
+    document.getElementById('m-err').style.display='block';
+    document.getElementById('m-ans').value='';
+    document.getElementById('m-ans').focus();
+    genMath();return;
+  }
+  document.getElementById('m-err').style.display='none';
+  showStep('s-wallet');
+  setTimeout(()=>document.getElementById('f-name').focus(),200);
+}
+
+document.getElementById('f-submit').addEventListener('click',submitClaim);
+document.getElementById('f-wallet').addEventListener('keydown',e=>{if(e.key==='Enter')submitClaim();});
+function isSolana(a){return/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a.trim());}
+
+function submitClaim(){
+  if(!currentTier)return;
+  const name=document.getElementById('f-name').value.trim();
+  const wallet=document.getElementById('f-wallet').value.trim();
+  if(!name||!isSolana(wallet)){document.getElementById('f-err').style.display='block';return;}
+  document.getElementById('f-err').style.display='none';
+  document.getElementById('f-submit').disabled=true;
+  document.getElementById('f-submit').textContent='SUBMITTING...';
+
+  const fd=new FormData();
+  fd.append('form-name','vault-claim');
+  fd.append('username',name);
+  fd.append('wallet',wallet);
+  fd.append('score',fmtF(score));
+  fd.append('tier',currentTier.emoji+' '+currentTier.title+' ('+currentTier.prize+')');
+  fd.append('tap_count',totalTaps);
+  fd.append('session_minutes',sessionMins()+'min');
+  fd.append('timestamp',new Date().toISOString());
+  fetch('/',{method:'POST',body:fd}).catch(()=>{});
+
+  claimed[currentTier.id]={wallet,name,score:Math.floor(score),ts:Date.now()};
+  save();refresh();
+  setTimeout(()=>{
+    showStep('s-success');
+    document.getElementById('s-tweet').onclick=()=>tweetScore(currentTier);
+  },700);
+}
+
+// Close modal
+document.getElementById('mx').addEventListener('click',()=>{
+  document.getElementById('overlay').classList.remove('open');currentTier=null;
+});
+document.getElementById('overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('overlay')){
+    document.getElementById('overlay').classList.remove('open');currentTier=null;
+  }
+});
+
+// ── TWEET ──
+function tweetScore(tier){
+  const s=Math.floor(score);
+  const msg=tier
+    ?`I just unlocked ${tier.emoji} ${tier.title} in the $SCOIN 10M Vault!\n\n${fmtF(s)} BLOCKS accumulated. Still here. 🏆\n\nPlay & claim real $SCOIN: https://stickcoin.xyz\n@Stickcoin1 #Solana #SCOIN #WAGMI`
+    :`Grinding the $SCOIN Vault — ${fmtF(s)} BLOCKS deep. WAGMI. 🏆\n\nhttps://stickcoin.xyz\n@Stickcoin1 #SCOIN #Solana`;
+  window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(msg),'_blank');
+}
+document.getElementById('btn-tweet').addEventListener('click',()=>{
+  if(Math.floor(score)<1000){setStatus('1K minimum to flex ser. Keep tapping 🧱');return;}
+  tweetScore(null);
+});
+
+// ── INIT ──
+buildPrizes();refresh();
+setStatus('Terminal active. Tap the stick. Secure your bags. 🟢');
+</script>
+</body>
+</html>
