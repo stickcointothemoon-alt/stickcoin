@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>$SCOIN – The 10M Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Share+Tech+Mono&family=Permanent+Marker&display=swap" rel="stylesheet">
+
+<!-- NETLIFY FORM (hidden — Netlify detects this on deploy) -->
+<form name="vault-claim" netlify netlify-honeypot="bot-field" hidden>
+  <input name="bot-field">
+  <input name="username" type="text">
+  <input name="wallet"   type="text">
+  <input name="score"    type="text">
+  <input name="tier"     type="text">
+  <input name="session_minutes" type="text">
+  <input name="timestamp" type="text">
+</form>
+
+<style>
+:root{--gold:#C9A227;--gold2:#F0C93A;--green:#39ff14;--red:#ff3333;--black:#050705;--panel:#0d0d0d;--border:#1e1e1e;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--black);color:#fff;font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden;touch-action:manipulation;user-select:none;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);pointer-events:none;z-index:9998;}
+
+.wrapper{max-width:960px;margin:0 auto;padding:14px;display:grid;grid-template-columns:1fr 290px;gap:14px;align-items:start;}
+@media(max-width:680px){.wrapper{grid-template-columns:1fr;}}
+
+/* HEADER */
+.hdr{grid-column:1/-1;text-align:center;border:2px solid var(--gold);background:var(--panel);padding:12px 20px;position:relative;overflow:hidden;}
+.hdr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(201,162,39,.05),transparent);animation:sweep 3s linear infinite;}
+@keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.hdr-title{font-family:'Bangers',cursive;font-size:clamp(26px,5vw,48px);letter-spacing:5px;color:var(--gold);text-shadow:0 0 20px rgba(201,162,39,.4);line-height:1;}
+.hdr-sub{font-size:10px;color:#444;letter-spacing:3px;text-transform:uppercase;margin-top:3px;}
+.live-dot{display:inline-block;width:7px;height:7px;background:var(--green);border-radius:50%;margin-right:5px;animation:ldot 1.2s ease-in-out infinite;}
+@keyframes ldot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(57,255,20,.4)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(57,255,20,0)}}
+
+/* GAME PANEL */
+.game-panel{background:var(--panel);border:2px solid var(--border);padding:18px;}
+.score-wrap{text-align:center;margin-bottom:14px;}
+.score-num{font-family:'Bangers',cursive;font-size:clamp(44px,9vw,76px);line-height:1;color:#fff;text-shadow:0 0 20px rgba(57,255,20,.15);letter-spacing:2px;}
+.score-lbl{color:var(--green);font-size:12px;letter-spacing:4px;}
+.stat-row{display:flex;justify-content:center;gap:20px;font-size:11px;color:#444;margin-top:6px;}
+.stat-row span{color:var(--gold);}
+
+/* ANTI-BOT WARNING */
+.bot-warning{display:none;background:rgba(255,51,51,.1);border:1px solid var(--red);color:var(--red);padding:8px 12px;font-size:11px;text-align:center;margin-bottom:10px;letter-spacing:.5px;}
+
+/* MASCOT */
+.mascot-wrap{position:relative;width:200px;height:200px;margin:12px auto;cursor:pointer;border:2px dashed #2a2a2a;border-radius:10px;background:#080808;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:transform .03s,border-color .2s;}
+.mascot-wrap:active{transform:scale(0.9);}
+.mascot-wrap.jeet-mode{border-color:var(--red);box-shadow:0 0 25px rgba(255,51,51,.25);}
+.mascot-wrap.moon-mode{border-color:var(--green);box-shadow:0 0 25px rgba(57,255,20,.25);}
+.mascot-img{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;z-index:2;}
+.mascot-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1;}
+.tap-hint{text-align:center;font-size:10px;color:#2a2a2a;letter-spacing:2px;margin-bottom:10px;animation:bh 2s step-end infinite;}
+@keyframes bh{0%,100%{opacity:.3}50%{opacity:1}}
+.pop{position:absolute;font-family:'Bangers',cursive;font-size:26px;pointer-events:none;z-index:10;animation:pup .5s ease-out forwards;}
+@keyframes pup{0%{opacity:1;transform:translateY(0) scale(1.3);}100%{opacity:0;transform:translateY(-80px) scale(.7);}}
+
+/* UPGRADES */
+.upgrades{display:flex;flex-direction:column;gap:7px;margin-bottom:10px;}
+.upg{background:var(--panel);border:1px solid var(--border);color:#fff;padding:10px 14px;font-family:'Share Tech Mono',monospace;font-size:11px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;transition:border-color .2s;}
+.upg:not(:disabled):hover{border-color:var(--gold);}
+.upg:not(:disabled):active{transform:translateY(1px);}
+.upg:disabled{opacity:.25;cursor:not-allowed;}
+.upg .un{color:var(--gold);}
+.upg .uc{color:#444;font-size:10px;}
+.upg .ue{color:var(--green);font-size:10px;}
+
+/* STATUS */
+.status{background:#080808;border:1px solid #181818;padding:9px 12px;font-size:11px;min-height:36px;color:var(--green);letter-spacing:.4px;transition:all .3s;}
+.status.jeet{border-color:var(--red)!important;color:var(--red)!important;background:rgba(255,51,51,.05);}
+.tweet-btn{width:100%;background:#1DA1F2;color:#fff;border:none;padding:11px;font-family:'Bangers',cursive;font-size:17px;letter-spacing:2px;cursor:pointer;margin-top:7px;transition:background .15s;}
+.tweet-btn:hover{background:#1a91da;}
+
+/* PRIZE PANEL */
+.prize-panel{background:var(--panel);border:2px solid var(--gold);position:sticky;top:14px;}
+.prize-hdr{background:var(--gold);color:#000;padding:10px 14px;font-family:'Bangers',cursive;font-size:18px;letter-spacing:3px;text-align:center;}
+.prize-list{padding:10px;}
+.tier{border:1px solid #181818;padding:9px 11px;margin-bottom:7px;transition:border-color .3s;}
+.tier.unlocked{border-color:var(--gold);background:rgba(201,162,39,.04);}
+.tier.claimed{border-color:#252525;opacity:.45;}
+.tier.legendary{border-color:#333;background:linear-gradient(135deg,rgba(201,162,39,.06),transparent);}
+.tier.legendary .t-prize{color:var(--gold2);text-shadow:0 0 8px rgba(201,162,39,.4);}
+.t-top{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+.t-emoji{font-size:18px;}
+.t-title{font-family:'Permanent Marker',cursive;font-size:12px;color:#ccc;}
+.t-score{font-size:9px;color:#383838;margin-bottom:3px;}
+.t-prize{font-family:'Bangers',cursive;font-size:15px;color:var(--gold);letter-spacing:1px;}
+.t-bar{height:2px;background:#111;margin-top:7px;border-radius:1px;overflow:hidden;}
+.t-bar-fill{height:100%;background:var(--gold);transition:width .5s;border-radius:1px;}
+.t-claim{display:none;width:100%;margin-top:7px;background:var(--gold);color:#000;border:none;padding:7px;font-family:'Bangers',cursive;font-size:15px;letter-spacing:2px;cursor:pointer;animation:pclaim 1.5s ease-in-out infinite;}
+@keyframes pclaim{0%,100%{box-shadow:0 0 0 0 rgba(201,162,39,.5)}50%{box-shadow:0 0 0 6px rgba(201,162,39,0)}}
+.t-claim:hover{background:var(--gold2);}
+.tier.unlocked .t-claim{display:block;}
+.t-claimed{display:none;font-size:9px;color:#383838;margin-top:5px;letter-spacing:1px;}
+.tier.claimed .t-claimed{display:block;}
+.tier.claimed .t-claim{display:none !important;}
+.leg-badge{display:inline-block;background:var(--gold);color:#000;font-size:8px;padding:1px 5px;font-weight:bold;letter-spacing:2px;margin-left:5px;vertical-align:middle;}
+.vault-total{padding:8px 11px;font-size:9px;border-top:1px solid #111;display:flex;justify-content:space-between;color:#2a2a2a;}
+.vault-total span{color:var(--gold);}
+.lb-note{padding:9px 11px;font-size:9px;color:#2a2a2a;border-top:1px solid #0f0f0f;letter-spacing:.4px;line-height:1.8;}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:9000;align-items:center;justify-content:center;padding:16px;}
+.overlay.open{display:flex;}
+.modal{background:var(--panel);border:2px solid var(--gold);padding:28px;max-width:420px;width:100%;position:relative;box-shadow:0 0 50px rgba(201,162,39,.2);}
+.modal-x{position:absolute;top:10px;right:14px;background:none;border:none;color:#444;font-size:20px;cursor:pointer;}
+.modal-x:hover{color:#fff;}
+.modal-title{font-family:'Bangers',cursive;font-size:28px;color:var(--gold);letter-spacing:4px;margin-bottom:2px;}
+.modal-tier{font-size:11px;color:#444;letter-spacing:2px;margin-bottom:16px;}
+.prize-box{background:#080808;border:1px solid var(--gold);padding:14px;text-align:center;margin-bottom:16px;}
+.prize-box-lbl{font-size:10px;color:#444;margin-bottom:3px;letter-spacing:2px;}
+.prize-box-amt{font-family:'Bangers',cursive;font-size:32px;color:var(--gold);letter-spacing:2px;text-shadow:0 0 12px rgba(201,162,39,.35);}
+
+/* MATH CHALLENGE */
+.math-step{margin-bottom:14px;}
+.math-q{font-size:13px;color:#888;margin-bottom:8px;letter-spacing:.5px;}
+.math-q strong{color:var(--gold);font-size:18px;}
+.math-input{width:100%;background:#080808;border:1px solid #333;color:var(--gold);padding:11px 13px;font-family:'Share Tech Mono',monospace;font-size:18px;outline:none;text-align:center;letter-spacing:2px;}
+.math-input:focus{border-color:var(--gold);}
+.math-err{font-size:10px;color:var(--red);margin-top:5px;display:none;}
+.math-btn{width:100%;background:#1a1a1a;color:var(--gold);border:1px solid var(--gold);padding:11px;font-family:'Bangers',cursive;font-size:18px;letter-spacing:2px;cursor:pointer;margin-top:8px;transition:background .15s;}
+.math-btn:hover{background:rgba(201,162,39,.1);}
+
+/* WALLET STEP */
+.wallet-step{display:none;}
+.step-lbl{font-size:11px;color:#555;margin-bottom:10px;line-height:1.7;}
+.name-input,.wallet-input{width:100%;background:#080808;border:1px solid #2a2a2a;color:var(--gold);padding:11px 13px;font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;margin-bottom:7px;letter-spacing:.5px;}
+.name-input:focus,.wallet-input:focus{border-color:var(--gold);}
+.name-input::placeholder,.wallet-input::placeholder{color:#282828;}
+.field-lbl{font-size:9px;color:#383838;margin-bottom:3px;letter-spacing:2px;}
+.submit-btn{width:100%;background:var(--gold);color:#000;border:none;padding:13px;font-family:'Bangers',cursive;font-size:20px;letter-spacing:3px;cursor:pointer;transition:background .15s;}
+.submit-btn:hover{background:var(--gold2);}
+.submit-btn:disabled{background:#222;color:#444;cursor:not-allowed;}
+.form-err{font-size:10px;color:var(--red);margin-top:5px;display:none;}
+.form-note{font-size:9px;color:#2a2a2a;margin-top:9px;line-height:1.8;letter-spacing:.4px;}
+
+/* SUCCESS */
+.success-step{display:none;text-align:center;padding:10px 0;}
+.success-icon{font-size:52px;margin-bottom:14px;}
+.success-title{font-family:'Bangers',cursive;font-size:26px;color:var(--gold);letter-spacing:3px;margin-bottom:8px;}
+.success-text{font-size:11px;color:#555;line-height:1.9;}
+.success-tweet{width:100%;background:#1DA1F2;color:#fff;border:none;padding:11px;font-family:'Bangers',cursive;font-size:17px;letter-spacing:2px;cursor:pointer;margin-top:14px;}
+
+/* BOT BLOCKED */
+.bot-block-step{display:none;text-align:center;padding:10px 0;}
+.bot-block-step .bi{font-size:48px;margin-bottom:12px;}
+.bot-block-step h3{font-family:'Bangers',cursive;font-size:22px;color:var(--red);letter-spacing:3px;margin-bottom:8px;}
+.bot-block-step p{font-size:11px;color:#555;line-height:1.9;}
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-title">🏆 THE 10M VAULT</div>
+    <div class="hdr-sub"><span class="live-dot"></span>$SCOIN Accumulation Terminal · Solana Degen Edition</div>
+  </div>
+
+  <!-- LEFT: GAME -->
+  <div class="game-panel">
+
+    <div class="bot-warning" id="bot-warn">
+      ⚠ Suspicious tap speed detected. Slow down, ser — bots are not eligible for prizes.
+    </div>
+
+    <div class="score-wrap">
+      <div class="score-num" id="score-display">0</div>
+      <div class="score-lbl">BLOCKS ACCUMULATED</div>
+      <div class="stat-row">
+        <div>APE POWER: <span id="stat-power">+1</span>/tap</div>
+        <div>PASSIVE: <span id="stat-auto">+0</span>/sec</div>
+        <div>SESSION: <span id="stat-time">0m</span></div>
+      </div>
+    </div>
+
+    <div class="tap-hint">[ TAP THE STICK TO ACCUMULATE ]</div>
+
+    <div class="mascot-wrap" id="mascot">
+      <img src="1000079781.jpg" id="mascot-img" class="mascot-img" alt="Stick"
+        onerror="this.style.display='none';document.getElementById('mfb').style.display='flex'">
+      <div class="mascot-fallback" id="mfb" style="display:none;">
+        <svg viewBox="0 0 200 300" width="150" height="220" xmlns="http://www.w3.org/2000/svg" fill="none">
+          <circle cx="100" cy="70" r="55" fill="#FEFEFE" stroke="#111" stroke-width="4"/>
+          <path d="M60 58 Q68 52 76 57" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M122 56 Q130 50 138 55" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M60 68 Q68 60 76 68" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <ellipse cx="68" cy="70" rx="5" ry="4" fill="#111"/>
+          <path d="M122 66 Q130 58 138 66" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <ellipse cx="130" cy="68" rx="5" ry="4" fill="#111"/>
+          <path d="M88 92 Q100 104 118 94" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <rect x="78" y="38" width="38" height="14" rx="4" fill="#F5CBA7" stroke="#111" stroke-width="2" transform="rotate(-5,97,45)"/>
+          <path d="M50 46 L60 14 L78 32 L100 8 L122 32 L140 14 L150 46 Z" fill="#C9A227" stroke="#111" stroke-width="3"/>
+          <circle cx="100" cy="20" r="6" fill="#E74C3C" stroke="#111" stroke-width="1.5"/>
+          <line x1="100" y1="125" x2="100" y2="230" stroke="#111" stroke-width="9" stroke-linecap="round"/>
+          <line x1="100" y1="230" x2="68" y2="295" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+          <line x1="100" y1="230" x2="132" y2="295" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+          <line x1="100" y1="155" x2="48" y2="192" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+          <line x1="100" y1="155" x2="152" y2="192" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+          <circle cx="100" cy="175" r="16" fill="#C9A227" stroke="#111" stroke-width="2.5"/>
+          <text x="100" y="180" text-anchor="middle" font-family="Arial Black" font-size="11" fill="#111" font-weight="900">S</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="upgrades">
+      <button class="upg" id="btn-coffee" disabled>
+        <div><div class="un">☕ APE GM COFFEE</div><div class="ue">+1 tap power</div></div>
+        <div class="uc" id="cost-coffee">Cost: 50</div>
+      </button>
+      <button class="upg" id="btn-shill" disabled>
+        <div><div class="un">📢 SHILL INFLUENCER</div><div class="ue">+2 blocks/sec</div></div>
+        <div class="uc" id="cost-shill">Cost: 200</div>
+      </button>
+      <button class="upg" id="btn-whale" disabled>
+        <div><div class="un">🐳 BRIBE A WHALE</div><div class="ue">+10 tap power</div></div>
+        <div class="uc" id="cost-whale">Cost: 5,000</div>
+      </button>
+      <button class="upg" id="btn-bot" disabled>
+        <div><div class="un">🤖 DEPLOY BOT ARMY</div><div class="ue">+20 blocks/sec</div></div>
+        <div class="uc" id="cost-bot">Cost: 50,000</div>
+      </button>
+    </div>
+
+    <div class="status" id="status">Terminal active. Tap the stick. Secure your bags. 🟢</div>
+    <button class="tweet-btn" id="btn-tweet">🐦 FLEX YOUR SCORE ON X</button>
+
+  </div>
+
+  <!-- RIGHT: PRIZES -->
+  <div class="prize-panel">
+    <div class="prize-hdr">🏆 VAULT PRIZES</div>
+    <div class="prize-list" id="prize-list"></div>
+    <div class="vault-total"><div>VAULT TOTAL</div><div><span>10,000,000</span> $SCOIN</div></div>
+    <div class="lb-note">
+      📋 Reach a tier → CLAIM → pass security check → enter your details → we send within 24h.<br><br>
+      👑 VAULT LEGEND is <strong style="color:var(--gold)">claimed ONCE ever</strong>. First to 10M wins it all.
+    </div>
+  </div>
+
+</div>
+
+<!-- CLAIM MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="modal-x" id="modal-x">✕</button>
+
+    <!-- STEP 1: BOT CHECK (math) -->
+    <div id="step-math">
+      <div class="modal-title">SECURITY CHECK</div>
+      <div class="modal-tier" id="math-tier-name">Verifying you're human, ser</div>
+      <div class="prize-box">
+        <div class="prize-box-lbl">YOUR PRIZE</div>
+        <div class="prize-box-amt" id="math-prize-amt">0 $SCOIN</div>
+      </div>
+      <div class="math-step">
+        <div class="math-q">Solve this to prove you're human:<br><strong id="math-question">? + ? = ?</strong></div>
+        <input class="math-input" id="math-answer" type="number" placeholder="Your answer..." autocomplete="off">
+        <div class="math-err" id="math-err">❌ Wrong answer. Try again, ser.</div>
+        <button class="math-btn" id="math-submit">VERIFY →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: WALLET + NAME -->
+    <div id="step-wallet" class="wallet-step">
+      <div class="modal-title">CLAIM REWARD</div>
+      <div class="modal-tier" id="wallet-tier-name">TIER</div>
+      <div class="prize-box">
+        <div class="prize-box-lbl">YOUR PRIZE</div>
+        <div class="prize-box-amt" id="wallet-prize-amt">0 $SCOIN</div>
+      </div>
+      <div class="step-lbl">
+        Enter your details below. We verify your score and send $SCOIN manually within 24h. Make sure your wallet can receive SPL tokens.
+      </div>
+      <div class="field-lbl">YOUR NAME / TELEGRAM USERNAME</div>
+      <input class="name-input" id="name-input" placeholder="@yourname or Telegram username..." maxlength="60" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="field-lbl">SOLANA WALLET ADDRESS</div>
+      <input class="wallet-input" id="wallet-input" placeholder="Your Solana wallet address..." maxlength="64" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="form-err" id="form-err">⚠ Please fill in all fields with a valid wallet address.</div>
+      <button class="submit-btn" id="submit-btn">SUBMIT CLAIM →</button>
+      <div class="form-note">
+        ⚠ One claim per wallet per tier. Your score, session time and tap pattern are logged for verification. Abuse = disqualification.
+      </div>
+    </div>
+
+    <!-- STEP 3: SUCCESS -->
+    <div id="step-success" class="success-step">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">CLAIM SUBMITTED!</div>
+      <div class="success-text">
+        Your claim has been received.<br>
+        The Stickcoin team will verify your score<br>
+        and send your $SCOIN within <strong style="color:var(--gold)">24 hours</strong>.<br><br>
+        Flex on the degens:
+      </div>
+      <button class="success-tweet" id="success-tweet">🐦 SHARE ON X</button>
+    </div>
+
+    <!-- BOT BLOCKED -->
+    <div id="step-botblock" class="bot-block-step">
+      <div class="bi">🤖</div>
+      <h3>BOT DETECTED</h3>
+      <div class="success-text">
+        Your tap speed was flagged as suspicious.<br>
+        Only human degens can claim prizes, ser.<br><br>
+        Close and play fair. We're watching the logs. 👀
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── TIERS ───
+const TIERS = [
+  {id:'t1',score:5000,    emoji:'🧻',title:'Paper Hand Survivor',prize:'1,000 $SCOIN',    prizeNum:1000},
+  {id:'t2',score:25000,   emoji:'🦍',title:'Trench Warrior',      prize:'10,000 $SCOIN',   prizeNum:10000},
+  {id:'t3',score:100000,  emoji:'🗿',title:'Diamond Chad',         prize:'100,000 $SCOIN',  prizeNum:100000},
+  {id:'t4',score:500000,  emoji:'🐋',title:'Vril Whale',           prize:'500,000 $SCOIN',  prizeNum:500000},
+  {id:'t5',score:10000000,emoji:'👑',title:'Vault Legend',         prize:'10,000,000 $SCOIN',prizeNum:10000000,legendary:true},
+];
+
+// ─── UPGRADES ───
+const UPGRADES = [
+  {id:'coffee',btn:'btn-coffee',costEl:'cost-coffee',baseCost:50,   mult:2.2,tap:1, auto:0, img:'1000079786.jpg',msg:'GM. Caffeine injected. Ape power +1 ☕'},
+  {id:'shill', btn:'btn-shill', costEl:'cost-shill', baseCost:200,  mult:2.6,tap:0, auto:2, img:'1000079785.jpg',msg:'Influencer paid. Passive pump online 🚀'},
+  {id:'whale', btn:'btn-whale', costEl:'cost-whale', baseCost:5000, mult:3.0,tap:10,auto:0, img:'1000079781.jpg',msg:'Whale bribed. Ape power surge! 🐳'},
+  {id:'bot',   btn:'btn-bot',   costEl:'cost-bot',   baseCost:50000,mult:3.5,tap:0, auto:20,img:'1000079781.jpg',msg:'Bot army deployed. Passive pump online 🤖'},
+];
+
+// ─── STATE ───
+const SK = 'scoin_v3_';
+let score    = parseFloat(localStorage.getItem(SK+'score'))  || 0;
+let tapPower = parseInt(localStorage.getItem(SK+'tap'))      || 1;
+let autoRate = parseInt(localStorage.getItem(SK+'auto'))     || 0;
+let claimed  = JSON.parse(localStorage.getItem(SK+'claimed') || '{}');
+let costs    = {};
+UPGRADES.forEach(u => costs[u.id] = parseInt(localStorage.getItem(SK+'cost_'+u.id)) || u.baseCost);
+
+// ─── ANTI-BOT ───
+const sessionStart = Date.now();
+let tapTimestamps  = []; // rolling last 30 taps
+let botFlagged     = false;
+let totalTaps      = 0;
+
+function recordTap() {
+  const now = Date.now();
+  tapTimestamps.push(now);
+  totalTaps++;
+  // Keep only last 30 taps
+  tapTimestamps = tapTimestamps.filter(t => now - t < 10000);
+  // If 30 taps happened in under 10 seconds → suspicious (3/sec sustained)
+  if(tapTimestamps.length >= 28) {
+    const span = tapTimestamps[tapTimestamps.length-1] - tapTimestamps[0];
+    const tps  = tapTimestamps.length / (span / 1000);
+    if(tps > 12) { // > 12 taps/sec = bot
+      botFlagged = true;
+      document.getElementById('bot-warn').style.display = 'block';
+    }
+  }
+}
+
+function sessionMinutes() {
+  return ((Date.now() - sessionStart) / 60000).toFixed(1);
+}
+
+// Score plausibility: max realistic = ~50/tap * 10taps/sec * 60s * minutes + auto
+function scoreIsPlausible() {
+  const mins = (Date.now() - sessionStart) / 60000;
+  // Very generous limit: 500 blocks/sec max including upgrades
+  const maxPossible = (500 * 60 * mins) + 10000;
+  return score <= maxPossible;
+}
+
+// ─── MATH CHALLENGE ───
+let mathAnswer = 0;
+let currentTier = null;
+
+function generateMath() {
+  const ops = ['+','+','*','-']; // weighted toward +
+  const op  = ops[Math.floor(Math.random()*ops.length)];
+  let a,b,ans;
+  if(op==='+'){a=Math.floor(Math.random()*20)+5;b=Math.floor(Math.random()*20)+5;ans=a+b;}
+  else if(op==='-'){a=Math.floor(Math.random()*20)+15;b=Math.floor(Math.random()*10)+1;ans=a-b;}
+  else{a=Math.floor(Math.random()*9)+2;b=Math.floor(Math.random()*9)+2;ans=a*b;}
+  mathAnswer = ans;
+  document.getElementById('math-question').textContent = `${a} ${op} ${b} = ?`;
+}
+
+// ─── DOM ───
+const scoreDisplay = document.getElementById('score-display');
+const statPower    = document.getElementById('stat-power');
+const statAuto     = document.getElementById('stat-auto');
+const statTime     = document.getElementById('stat-time');
+const mascot       = document.getElementById('mascot');
+const mascotImg    = document.getElementById('mascot-img');
+const statusEl     = document.getElementById('status');
+
+// ─── BUILD PRIZE LIST ───
+function buildPrizes() {
+  const list = document.getElementById('prize-list');
+  list.innerHTML = '';
+  TIERS.forEach(t => {
+    const d = document.createElement('div');
+    d.className = 'tier' + (t.legendary?' legendary':'');
+    d.id = 'tier-'+t.id;
+    d.innerHTML = `
+      <div class="t-top"><div class="t-emoji">${t.emoji}</div>
+      <div class="t-title">${t.title}${t.legendary?'<span class="leg-badge">1x ONLY</span>':''}</div></div>
+      <div class="t-score">${fmt(t.score)} BLOCKS required</div>
+      <div class="t-prize">${t.prize}</div>
+      <div class="t-bar"><div class="t-bar-fill" id="bar-${t.id}" style="width:0%"></div></div>
+      <button class="t-claim" id="claim-${t.id}">⚡ CLAIM NOW</button>
+      <div class="t-claimed">✓ SUBMITTED — PENDING VERIFICATION</div>`;
+    list.appendChild(d);
+    document.getElementById('claim-'+t.id).addEventListener('click',()=>openClaim(t));
+  });
+}
+
+// ─── FORMAT ───
+function fmt(n){if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return Math.floor(n).toLocaleString();}
+function fmtFull(n){return Math.floor(n).toLocaleString();}
+
+// ─── REFRESH ───
+function refresh() {
+  scoreDisplay.textContent = fmtFull(score);
+  statPower.textContent = '+'+tapPower;
+  statAuto.textContent  = '+'+autoRate;
+  statTime.textContent  = sessionMinutes()+'m';
+
+  UPGRADES.forEach(u => {
+    document.getElementById(u.btn).disabled = score < costs[u.id];
+    document.getElementById(u.costEl).textContent = 'Cost: '+fmt(costs[u.id]);
+  });
+
+  TIERS.forEach(t => {
+    const pct    = Math.min(100,(score/t.score)*100);
+    const barEl  = document.getElementById('bar-'+t.id);
+    const tierEl = document.getElementById('tier-'+t.id);
+    if(barEl) barEl.style.width = pct+'%';
+    if(!tierEl) return;
+    if(claimed[t.id]){tierEl.classList.remove('unlocked');tierEl.classList.add('claimed');}
+    else if(score>=t.score){tierEl.classList.add('unlocked');tierEl.classList.remove('claimed');}
+    else{tierEl.classList.remove('unlocked','claimed');}
+  });
+}
+
+// ─── SAVE ───
+function save(){
+  localStorage.setItem(SK+'score',score);
+  localStorage.setItem(SK+'tap',tapPower);
+  localStorage.setItem(SK+'auto',autoRate);
+  localStorage.setItem(SK+'claimed',JSON.stringify(claimed));
+  UPGRADES.forEach(u=>localStorage.setItem(SK+'cost_'+u.id,costs[u.id]));
+}
+
+// ─── TAP ───
+mascot.addEventListener('click', e => {
+  if(navigator.vibrate) navigator.vibrate(25);
+  recordTap();
+
+  let val = tapPower;
+  if(activeEvent==='JEET'){
+    val = tapPower*5;
+    pop(e,'+'+val+' DEF','#ff3333');
+    endJeet(); return;
+  }
+  score += val;
+  pop(e,'+'+val,'#39ff14');
+  refresh();
+
+  // milestone notify
+  TIERS.forEach(t=>{
+    if(score>=t.score && !claimed[t.id]){
+      const el=document.getElementById('tier-'+t.id);
+      if(el && !el.classList.contains('unlocked'))
+        setStatus(`🏆 TIER UNLOCKED: ${t.emoji} ${t.title.toUpperCase()}! Claim your ${t.prize}!`);
+    }
+  });
+});
+
+// ─── POP ───
+function pop(e,txt,color){
+  const r=mascot.getBoundingClientRect();
+  const jx=(Math.random()-.5)*44;
+  const el=document.createElement('div');
+  el.className='pop';
+  el.style.left=(e.clientX-r.left+jx)+'px';
+  el.style.top=(e.clientY-r.top)+'px';
+  el.style.color=color;
+  el.textContent=txt;
+  mascot.appendChild(el);
+  setTimeout(()=>el.remove(),520);
+}
+
+// ─── STATUS ───
+function setStatus(msg,jeet=false){
+  statusEl.textContent=msg;
+  jeet?statusEl.classList.add('jeet'):statusEl.classList.remove('jeet');
+}
+
+// ─── UPGRADES ───
+UPGRADES.forEach(u=>{
+  document.getElementById(u.btn).addEventListener('click',()=>{
+    if(score<costs[u.id]) return;
+    score-=costs[u.id];tapPower+=u.tap;autoRate+=u.auto;
+    costs[u.id]=Math.floor(costs[u.id]*u.mult);
+    setStatus(u.msg);swapImg(u.img,1400);save();refresh();
+  });
+});
+function swapImg(src,dur){mascotImg.src=src;setTimeout(()=>{if(!activeEvent)mascotImg.src='1000079781.jpg';},dur);}
+
+// ─── AUTO TICK ───
+setInterval(()=>{if(autoRate>0){score+=autoRate/10;refresh();}},100);
+setInterval(save,3000);
+setInterval(()=>{statTime.textContent=sessionMinutes()+'m';},10000);
+
+// ─── EVENTS ───
+let activeEvent=null;
+setInterval(()=>{
+  if(activeEvent) return;
+  const r=Math.random();
+  if(r<0.18) triggerJeet();
+  else if(r>0.88&&score>200) triggerMoon();
+},12000);
+
+function triggerJeet(){
+  activeEvent='JEET';mascot.classList.add('jeet-mode');
+  setStatus('🚨 WHALE DUMP INCOMING! SPAM TAP TO DEFEND THE FLOOR! 🚨',true);
+  mascotImg.src='1000079782.jpg';
+}
+function endJeet(){
+  activeEvent=null;mascot.classList.remove('jeet-mode');
+  setStatus('Paper hands rekt. Floor secured. Good hold chad. 🗿');
+  mascotImg.src='1000079781.jpg';save();refresh();
+}
+function triggerMoon(){
+  activeEvent='MOON';mascot.classList.add('moon-mode');
+  setStatus('🚀 100X ENERGY SURGE! MULTIPLIER ONLINE — SEND IT! 🚀');
+  mascotImg.src='1000079783.jpg';
+  const base=tapPower;tapPower*=10;refresh();
+  setTimeout(()=>{tapPower=base;activeEvent=null;mascot.classList.remove('moon-mode');
+    setStatus('Altitude stabilized.');mascotImg.src='1000079781.jpg';save();refresh();},5000);
+}
+
+// ─── CLAIM MODAL ───
+function showStep(id){
+  ['step-math','step-wallet','step-success','step-botblock'].forEach(s=>
+    document.getElementById(s).style.display=s===id?'block':'none'
+  );
+}
+
+function openClaim(tier){
+  currentTier=tier;
+  // Check bot flag AND score plausibility
+  if(botFlagged || !scoreIsPlausible()){
+    document.getElementById('overlay').classList.add('open');
+    showStep('step-botblock'); return;
+  }
+  // Set up math step
+  document.getElementById('math-tier-name').textContent=tier.emoji+' '+tier.title.toUpperCase();
+  document.getElementById('math-prize-amt').textContent=tier.prize;
+  document.getElementById('math-answer').value='';
+  document.getElementById('math-err').style.display='none';
+  generateMath();
+  // Set up wallet step
+  document.getElementById('wallet-tier-name').textContent=tier.emoji+' '+tier.title.toUpperCase();
+  document.getElementById('wallet-prize-amt').textContent=tier.prize;
+  document.getElementById('name-input').value='';
+  document.getElementById('wallet-input').value='';
+  document.getElementById('form-err').style.display='none';
+  document.getElementById('submit-btn').disabled=false;
+  document.getElementById('submit-btn').textContent='SUBMIT CLAIM →';
+  showStep('step-math');
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('math-answer').focus(),300);
+}
+
+// Math submit
+document.getElementById('math-submit').addEventListener('click',checkMath);
+document.getElementById('math-answer').addEventListener('keydown',e=>{if(e.key==='Enter')checkMath();});
+function checkMath(){
+  const ans=parseInt(document.getElementById('math-answer').value);
+  if(isNaN(ans)||ans!==mathAnswer){
+    document.getElementById('math-err').style.display='block';
+    document.getElementById('math-answer').value='';
+    document.getElementById('math-answer').focus();
+    generateMath(); return;
+  }
+  document.getElementById('math-err').style.display='none';
+  showStep('step-wallet');
+  setTimeout(()=>document.getElementById('name-input').focus(),200);
+}
+
+// Wallet submit
+document.getElementById('submit-btn').addEventListener('click',submitClaim);
+document.getElementById('wallet-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitClaim();});
+
+function isValidSolana(addr){return/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr.trim());}
+
+function submitClaim(){
+  if(!currentTier) return;
+  const name   = document.getElementById('name-input').value.trim();
+  const wallet = document.getElementById('wallet-input').value.trim();
+  if(!name||!isValidSolana(wallet)){
+    document.getElementById('form-err').style.display='block'; return;
+  }
+  document.getElementById('form-err').style.display='none';
+  document.getElementById('submit-btn').disabled=true;
+  document.getElementById('submit-btn').textContent='SUBMITTING...';
+
+  // ── Submit to Netlify Forms ──
+  const formData = new FormData();
+  formData.append('form-name',       'vault-claim');
+  formData.append('username',        name);
+  formData.append('wallet',          wallet);
+  formData.append('score',           fmtFull(score));
+  formData.append('tier',            currentTier.emoji+' '+currentTier.title+' ('+currentTier.prize+')');
+  formData.append('session_minutes', sessionMinutes()+'min');
+  formData.append('timestamp',       new Date().toISOString());
+
+  fetch('/', {method:'POST', body:formData})
+    .catch(()=>{}); // silent fail — Netlify handles it
+
+  // Mark claimed locally
+  claimed[currentTier.id]={wallet,name,score:Math.floor(score),ts:Date.now()};
+  save(); refresh();
+
+  // Success
+  setTimeout(()=>{
+    showStep('step-success');
+    document.getElementById('success-tweet').onclick=()=>tweetScore(currentTier);
+  },600);
+}
+
+// Close modal
+document.getElementById('modal-x').addEventListener('click',()=>{
+  document.getElementById('overlay').classList.remove('open');currentTier=null;
+});
+document.getElementById('overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('overlay')){
+    document.getElementById('overlay').classList.remove('open');currentTier=null;
+  }
+});
+
+// ─── TWEET ───
+function tweetScore(tier){
+  const s=Math.floor(score);
+  const msg=tier
+    ?`I just unlocked ${tier.emoji} ${tier.title} in the 10M $SCOIN Vault!\n\n${fmtFull(s)} BLOCKS stacked. Still here. 🏆\n\nPlay & claim: https://stickcoin.xyz\n@Stickcoin1 #Solana #SCOIN #WAGMI`
+    :`Grinding the $SCOIN Vault — ${fmtFull(s)} BLOCKS deep. Still here. 🏆\n\nhttps://stickcoin.xyz\n@Stickcoin1 #Solana #SCOIN`;
+  window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(msg),'_blank');
+}
+document.getElementById('btn-tweet').addEventListener('click',()=>{
+  if(Math.floor(score)<1000){setStatus('1K minimum to flex. Keep tapping! 🧱');return;}
+  tweetScore(null);
+});
+document.getElementById('success-tweet')?.addEventListener('click',()=>tweetScore(currentTier));
+
+// ─── INIT ───
+buildPrizes(); refresh();
+setStatus('Terminal active. Tap the stick. Secure your bags. 🟢');
+</script>
+</body>
+</html>
